@@ -693,3 +693,4 @@ else(ENABLE_SRSEPC)
 endif(ENABLE_SRSEPC)
 
 add_subdirectory(test)
+add_executable(differential_correlation_test lib/src/phy/mdct/test/differential_correlation.c)
