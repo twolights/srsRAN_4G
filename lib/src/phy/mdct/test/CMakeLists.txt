@@ -1,0 +1,3 @@
+add_executable(differential_prod_test differential_prod_test.c)
+target_link_libraries(differential_prod_test srsran_phy)
+add_test(differential_prod_test differential_prod_test)
