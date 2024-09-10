@@ -1,3 +1,8 @@
 add_executable(differential_prod_test differential_prod_test.c)
 target_link_libraries(differential_prod_test srsran_phy)
+
+add_executable(mdct_test mdct_test.c)
+target_link_libraries(mdct_test srsran_phy)
+
 add_test(differential_prod_test differential_prod_test)
+add_test(mdct_test mdct_test)

@@ -8,7 +8,9 @@
 #include <complex.h>
 #include "srsran/phy/sync/pss_nr.h"
 
-typedef struct SRSRAN_API srsran_pss_mdct_t {
+#define SRSRAN_MDCT_PSS_FFT_SIZE 128
+
+typedef struct SRSRAN_API {
   cf_t** x_tilde[SRSRAN_NOF_NID_2_NR];
   cf_t* temp;
   cf_t* output;
@@ -17,7 +19,7 @@ typedef struct SRSRAN_API srsran_pss_mdct_t {
   uint32_t PSI;
 } srsran_pss_mdct_t;
 
-typedef struct SRSRAN_API srsran_pss_mdct_detect_res_t {
+typedef struct SRSRAN_API {
   int32_t   tau;        // time offset
   uint32_t  N_id_2;
   float     peak_value;
