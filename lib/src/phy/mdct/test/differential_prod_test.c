@@ -33,6 +33,15 @@ bool test_on_sequence()
   return true;
 }
 
+float calculate_correlation_value(cf_t* c, uint32_t n)
+{
+  float l = 0;
+  for (int i = 0; i < n; i++) {
+    l += creal(c[i]) * creal(c[i]) + cimag(c[i]) * cimag(c[i]);
+  }
+  return l;
+}
+
 void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
 {
   uint32_t N_id_2;
@@ -48,8 +57,12 @@ void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
 
 bool test_on_pss_nr()
 {
+  int i, j;
+  cf_t corr_output[FFT_SIZE];
+  float magnitude;
   cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE];
   cf_t all_pss_time_domain[SRSRAN_NOF_NID_2_NR][FFT_SIZE];
+  cf_t all_pss_diff_prod[SRSRAN_NOF_NID_2_NR][FFT_SIZE];
   srsran_dft_plan_t ifft_plan;
 
   prepare_all_pss_nr(all_pss);
@@ -60,9 +73,29 @@ bool test_on_pss_nr()
     srsran_dft_plan_free(&ifft_plan);
   }
 
-//  for (int i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
-//    differential_product(all_pss[i], all_pss_diff_prod[i], 1, SRSRAN_PSS_NR_LEN);
-//  }
+  for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
+    differential_product(all_pss_time_domain[i], all_pss_diff_prod[i], 1, FFT_SIZE);
+  }
+
+  printf("Test auto-correlation\n");
+  // Test auto-correlation
+  for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
+    for (j = -5; j <= 5; j++) {
+      srsran_vec_prod_conj_cyclic_ccc(all_pss_diff_prod[i], all_pss_diff_prod[i], corr_output, j, FFT_SIZE);
+      magnitude = calculate_correlation_value(corr_output, FFT_SIZE);
+//      srsran_vec_abs_square_cf(corr_output, &magnitude, FFT_SIZE);
+      printf("PSS(NID2=%d) with time shift = %d, value=%.5f\n", i, j, magnitude);
+    }
+  }
+
+  printf("Test cross-correlation\n");
+  for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
+    for (j = 0; j < SRSRAN_NOF_NID_2_NR; j++) {
+      srsran_vec_prod_conj_cyclic_ccc(all_pss_diff_prod[i], all_pss_diff_prod[j], corr_output, j, FFT_SIZE);
+      magnitude = calculate_correlation_value(corr_output, FFT_SIZE);
+      printf("PSS(NID2=%d & NID2=%d), value=%.5f\n", i, j, magnitude);
+    }
+  }
 
   return true;
 }
