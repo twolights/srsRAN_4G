@@ -11,7 +11,7 @@ void srsran_vec_prod_conj_cyclic_ccc(const cf_t* a, const cf_t* b, cf_t* c, int3
   uint32_t offset = (uint32_t)abs(shifts);
 
   // Avoid negative of samples
-  if (shifts > n) {
+  if (offset > n) {
     srsran_vec_cf_zero(c, n);
     return;
   }
