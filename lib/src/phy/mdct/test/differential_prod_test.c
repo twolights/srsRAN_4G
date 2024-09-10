@@ -4,12 +4,13 @@
 
 #include "srsran/phy/mdct/differential_prod.h"
 #include "srsran/phy/sync/pss_nr.h"
+#include "srsran/phy/dft/dft.h"
 #include <complex.h>
 #include <stdio.h>
 #include <string.h>
 
 #define N 10
-#define FFT_SIZE 128
+#define FFT_SIZE (SRSRAN_PSS_NR_LEN + 1)
 #define PSS_NR_SUBC_BEGIN 56
 
 bool test_on_sequence()
@@ -31,7 +32,8 @@ bool test_on_sequence()
   differential_product(a, c, d, N);
   return true;
 }
-void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_PSS_NR_LEN])
+
+void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
 {
   uint32_t N_id_2;
   cf_t ssb_grid[SRSRAN_SSB_NOF_RE];
@@ -40,14 +42,24 @@ void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_PSS_NR_LEN])
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
     srsran_pss_nr_put(ssb_grid, N_id_2, 1.0f);
     memcpy(all_pss[N_id_2], &ssb_grid[pss_loc_in_ssb], SRSRAN_PSS_NR_LEN * sizeof(cf_t));
+    all_pss[N_id_2][SRSRAN_PSS_NR_LEN] = 0.0f;
   }
 }
+
 bool test_on_pss_nr()
 {
-  cf_t all_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_PSS_NR_LEN];
+  cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE];
+  cf_t all_pss_time_domain[SRSRAN_NOF_NID_2_NR][FFT_SIZE];
+  srsran_dft_plan_t ifft_plan;
+
   prepare_all_pss_nr(all_pss);
 
-  // TODO generate time domain signals
+  for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
+    srsran_dft_plan_c(&ifft_plan, FFT_SIZE, SRSRAN_DFT_BACKWARD);
+    srsran_dft_run_c(&ifft_plan, all_pss[N_id_2], all_pss_time_domain[N_id_2]);
+    srsran_dft_plan_free(&ifft_plan);
+  }
+
 //  for (int i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
 //    differential_product(all_pss[i], all_pss_diff_prod[i], 1, SRSRAN_PSS_NR_LEN);
 //  }
