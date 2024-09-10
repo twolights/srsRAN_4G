@@ -10,7 +10,7 @@
 #include <string.h>
 
 #define N 10
-#define FFT_SIZE (SRSRAN_PSS_NR_LEN + 1)
+#define FFT_SIZE SRSRAN_PSS_NR_LEN
 #define PSS_NR_SUBC_BEGIN 56
 
 bool test_on_sequence()
@@ -50,8 +50,8 @@ void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
 
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
     srsran_pss_nr_put(ssb_grid, N_id_2, 1.0f);
+    memset(all_pss[N_id_2], 0, FFT_SIZE * sizeof(cf_t));
     memcpy(all_pss[N_id_2], &ssb_grid[pss_loc_in_ssb], SRSRAN_PSS_NR_LEN * sizeof(cf_t));
-    all_pss[N_id_2][SRSRAN_PSS_NR_LEN] = 0.0f;
   }
 }
 
@@ -83,7 +83,6 @@ bool test_on_pss_nr()
     for (j = -5; j <= 5; j++) {
       srsran_vec_prod_conj_cyclic_ccc(all_pss_diff_prod[i], all_pss_diff_prod[i], corr_output, j, FFT_SIZE);
       magnitude = calculate_correlation_value(corr_output, FFT_SIZE);
-//      srsran_vec_abs_square_cf(corr_output, &magnitude, FFT_SIZE);
       printf("PSS(NID2=%d) with time shift = %d, value=%.5f\n", i, j, magnitude);
     }
   }
@@ -91,7 +90,7 @@ bool test_on_pss_nr()
   printf("Test cross-correlation\n");
   for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
     for (j = 0; j < SRSRAN_NOF_NID_2_NR; j++) {
-      srsran_vec_prod_conj_cyclic_ccc(all_pss_diff_prod[i], all_pss_diff_prod[j], corr_output, j, FFT_SIZE);
+      srsran_vec_prod_conj_ccc(all_pss_diff_prod[i], all_pss_diff_prod[j], corr_output, FFT_SIZE);
       magnitude = calculate_correlation_value(corr_output, FFT_SIZE);
       printf("PSS(NID2=%d & NID2=%d), value=%.5f\n", i, j, magnitude);
     }
