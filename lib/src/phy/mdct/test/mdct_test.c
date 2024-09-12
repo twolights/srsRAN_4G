@@ -5,24 +5,155 @@
 #include <string.h>
 
 static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_PSS_NR_LEN];
+static srsran_pss_mdct_t mdct;
 
-#define NOF_SAMPLES 150
+#define NOF_SAMPLES 200
+#define NUM_SINGLE_CELL_TESTS 9
+#define NUM_MULTIPLE_CELL_TESTS 9
+#define ADJACENT_CELL_TEST_START 2
+#define ADJACENT_CELL_TEST_SIZE 3
+#define NUM_ADJACENT_CELLS 2
+
+// Test data for single cell tests, each row contains {N_id_2, tau}
+static int TEST_DATA[NUM_SINGLE_CELL_TESTS][2] = {
+    {0, 0},
+    {1, 0},
+    {2, 0},
+    {0, 20},
+    {1, 5},
+    {2, 15},
+    {0, 19},
+    {1, 7},
+    {2, 8},
+};
+
+// Test data for multiple cell tests, each row contains:
+// {Correct N_id_2, tau, N_id_2, tau, beta, N_id_2, tau, beta}
+// Beta represents signal strength, ranges from 0 to 99
+static int TEST_DATA_MULTIPLE_CELLS[NUM_MULTIPLE_CELL_TESTS][8] = {
+  {0, 0, 1, 10, 10, 2, 0, 10},
+  {0, 15, 1, 10, 20, 2, 10, 30},
+  {0, 30, 1, 10, 10, 2, 50, 10},
+  {1, 0, 0, 0, 30, 2, 0, 30},
+  {1, 10, 0, 10, 10, 2, 0, 0},
+  {1, 14, 0, 0, 0, 2, 40, 0},
+  {2, 0, 0, 10, 10, 1, 0, 10},
+  {2, 30, 0, 10, 10, 1, 50, 30},
+  {2, 60, 0, 10, 30, 1, 0, 10},
+};
 
 void get_time_domain_pss(cf_t* out, uint32_t N_id_2);
 
-int main() {
+static void prepare_mocked_received_samples(cf_t* buffer, uint32_t N_id_2, int32_t tau, bool add_noise)
+{
+  if (add_noise) {
+    memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
+    // TODO fill buffer with noise
+  } else {
+    memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
+  }
+  memcpy(buffer + tau, time_domain_pss[N_id_2], SRSRAN_PSS_NR_LEN * sizeof(cf_t));
+}
+
+static void append_pss(cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
+{
+  for (int i = 0; i < SRSRAN_PSS_NR_LEN; i++) {
+    buffer[tau + i] += time_domain_pss[N_id_2][i] * beta / 100.0;
+  }
+}
+
+static void prepare_all_time_domain_pss()
+{
   int i;
   for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
     get_time_domain_pss(time_domain_pss[i], i);
   }
+}
+
+static bool print_test_result(int N_id_2, int tau, srsran_pss_mdct_detect_res_t* res)
+{
+  if (res->tau == tau && res->N_id_2 == N_id_2) {
+    printf("passed for N_id_2=%d, tau=%d\n", N_id_2, tau);
+    return true;
+  }
+  printf("failed:");
+  if (res->tau != tau) {
+    printf(" expected tau=%d, got tau=%d", tau, res->tau);
+  }
+  if (res->N_id_2 != N_id_2) {
+    printf(" expected N_id_2=%d, got N_id_2=%d", N_id_2, res->N_id_2);
+  }
+  printf("\n");
+  return false;
+}
+
+static bool test_single_cell()
+{
   cf_t buffer[NOF_SAMPLES];
-  srsran_pss_mdct_t mdct;
+  int i, N_id_2, tau;
   srsran_pss_mdct_detect_res_t res;
-  memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
-  memcpy(buffer + 11, time_domain_pss[1], SRSRAN_PSS_NR_LEN * sizeof(cf_t));
-  srsran_prepare_pss_mdct(&mdct, SRSRAN_MDCT_PSS_FFT_SIZE, 1, 6);
-  mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, &res);
-  printf("MDCT: detected tau=%d, N_id_2=%d, peak_value=%f\n", res.tau, res.N_id_2, res.peak_value);
+  bool result = true;
+
+  printf("MDCT: Running single cell tests, without noise\n");
+  for (i = 0; i < NUM_SINGLE_CELL_TESTS; i++) {
+    N_id_2 = TEST_DATA[i][0];
+    tau    = TEST_DATA[i][1];
+    printf("Test %d/%d ", i + 1, NUM_SINGLE_CELL_TESTS);
+    prepare_mocked_received_samples(buffer, N_id_2, tau, false);
+    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, &res);
+    if (!print_test_result(N_id_2, tau, &res)) {
+      result = false;
+    }
+  }
+  return result;
+}
+
+static bool test_multiple_cells()
+{
+  cf_t buffer[NOF_SAMPLES];
+  int i, j, N_id_2, tau, adjacent_N_id_2, adjacent_tau, beta;
+  srsran_pss_mdct_detect_res_t res;
+  bool result = true;
+  int* row;
+  int* adjacent_cells[2];
+
+  printf("MDCT: Running multiple cells tests, with noise\n");
+  for(i = 0; i < NUM_MULTIPLE_CELL_TESTS; i++) {
+    row = TEST_DATA_MULTIPLE_CELLS[i];
+    N_id_2 = row[0];
+    tau = row[1];
+    printf("Test %d/%d ", i + 1, NUM_MULTIPLE_CELL_TESTS);
+    prepare_mocked_received_samples(buffer, N_id_2, tau, true);
+    adjacent_cells[0] = row + ADJACENT_CELL_TEST_START;
+    adjacent_cells[1] = row + ADJACENT_CELL_TEST_START + ADJACENT_CELL_TEST_SIZE;
+    for (j = 0; j < NUM_ADJACENT_CELLS; j++) {
+      adjacent_N_id_2 = adjacent_cells[j][0];
+      adjacent_tau = adjacent_cells[j][1];
+      beta = adjacent_cells[j][2];
+      if (beta <= 0) {
+        continue;
+      }
+      append_pss(buffer, adjacent_N_id_2, adjacent_tau, beta);
+    }
+    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, &res);
+    if (!print_test_result(N_id_2, tau, &res)) {
+      result = false;
+    }
+  }
+  return result;
+}
+
+int main() {
+  prepare_all_time_domain_pss();
+  srsran_prepare_pss_mdct(&mdct, SRSRAN_MDCT_PSS_FFT_SIZE,
+                          SRSRAN_MDCT_RECOMMENDED_Q,
+                          SRSRAN_MDCT_RECOMMENDED_PSI);
+  if(!test_single_cell()) {
+    return -1;
+  };
+  if(!test_multiple_cells()) {
+    return -1;
+  }
   srsran_destroy_pss_mdct(&mdct);
   return 0;
 }
