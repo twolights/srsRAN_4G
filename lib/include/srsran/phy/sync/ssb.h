@@ -24,6 +24,7 @@
 
 #include "srsran/config.h"
 #include "srsran/phy/common/phy_common_nr.h"
+#include "srsran/phy/mdct/mdct.h"
 #include "srsran/phy/dft/dft.h"
 #include "srsran/phy/phch/pbch_nr.h"
 #include <inttypes.h>
@@ -111,6 +112,8 @@ typedef struct SRSRAN_API {
   srsran_dft_plan_t fft_corr;  ///< FFT for correlation
   srsran_dft_plan_t ifft_corr; ///< IFFT for correlation
   srsran_pbch_nr_t  pbch;      ///< PBCH encoder and decoder
+
+  srsran_pss_mdct_t mdct;      ///< MDCT object for PSS
 
   /// Frequency/Time domain temporal data
   cf_t* tmp_freq;                     ///< Temporal frequency domain buffer

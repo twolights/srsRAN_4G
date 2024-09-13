@@ -29,6 +29,7 @@ typedef struct SRSRAN_API {
 
 SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t n, uint32_t Q, uint32_t PSI);
 SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct);
+// TODO rename
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
                                srsran_pss_mdct_detect_res_t* result);

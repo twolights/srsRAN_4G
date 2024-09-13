@@ -48,6 +48,8 @@
  */
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
+static bool use_mdct = true;
+
 static int ssb_init_corr(srsran_ssb_t* q)
 {
   // Initialise correlation only if it is enabled
@@ -133,6 +135,12 @@ int srsran_ssb_init(srsran_ssb_t* q, const srsran_ssb_args_t* args)
     return SRSRAN_ERROR;
   }
 
+  // MDCT
+  // TODO make Q & PSI configurable
+  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->corr_sz, 1, 6) < SRSRAN_SUCCESS) {
+    ERROR("Error preparing PSS MDCT");
+    return SRSRAN_ERROR;
+  }
   return SRSRAN_SUCCESS;
 }
 
@@ -170,6 +178,10 @@ void srsran_ssb_free(srsran_ssb_t* q)
   srsran_dft_plan_free(&q->fft_corr);
   srsran_dft_plan_free(&q->ifft_corr);
   srsran_pbch_nr_free(&q->pbch);
+
+  if (use_mdct) {
+    srsran_destroy_pss_mdct(&q->mdct);
+  }
 
   SRSRAN_MEM_ZERO(q, srsran_ssb_t, 1);
 }
@@ -822,6 +834,7 @@ ssb_measure(srsran_ssb_t* q, const cf_t ssb_grid[SRSRAN_SSB_NOF_RE], uint32_t N_
   return SRSRAN_SUCCESS;
 }
 
+// TODO move this to vector library
 static void ssb_vec_prod_conj_circ_shift(const cf_t* a, const cf_t* b, cf_t* c, uint32_t n, int shift)
 {
   uint32_t offset = (uint32_t)abs(shift);
@@ -848,6 +861,33 @@ static void ssb_vec_prod_conj_circ_shift(const cf_t* a, const cf_t* b, cf_t* c, 
 
   // Shift is zero
   srsran_vec_prod_conj_ccc(a, b, c, n);
+}
+
+int ssb_pss_search_with_mdct(srsran_ssb_t* q,
+                             const cf_t*   in,
+                             uint32_t      nof_samples,
+                             uint32_t*     found_N_id_2,
+                             uint32_t*     found_delay,
+                             float*        coarse_cfo_hz)
+{
+  // verify it is initialised
+  if (q->corr_sz == 0) {
+    return SRSRAN_ERROR;
+  }
+
+  // Calculate correlation CFO coarse precision
+//  double coarse_cfo_ref_hz = (q->cfg.srate_hz / q->corr_sz);
+
+  srsran_pss_mdct_detect_res_t res;
+
+  if (mdct_detect_pss(&q->mdct, in, nof_samples, &res) < SRSRAN_SUCCESS) {
+    return SRSRAN_ERROR;
+  }
+  *found_N_id_2 = res.N_id_2;
+  *found_delay  = res.tau;
+  *coarse_cfo_hz = 0; // coarse_cfo_ref_hz;  // TODO implement CFO estimation
+  printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f\n", *found_N_id_2, *found_delay, res.peak_value);
+  return SRSRAN_SUCCESS;
 }
 
 static int ssb_pss_search(srsran_ssb_t* q,
@@ -980,6 +1020,7 @@ static int ssb_pss_search(srsran_ssb_t* q,
   *found_N_id_2  = best_N_id_2;
   *coarse_cfo_hz = -(float)best_shift * coarse_cfo_ref_hz;
 
+  printf("Conv: PSS detected: N_id_2=%d, delay=%d, peak=%f\n", *found_N_id_2, *found_delay, best_corr);
   return SRSRAN_SUCCESS;
 }
 
@@ -1288,9 +1329,25 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   uint32_t N_id_2        = 0;
   uint32_t t_offset      = 0;
   float    coarse_cfo_hz = 0.0f;
-  if (ssb_pss_search(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
-    ERROR("Error searching for N_id_2");
-    return SRSRAN_ERROR;
+  if (use_mdct) {
+    uint32_t mdct_N_id_2= 0;
+    uint32_t mdct_t_offset      = 0;
+    float    mdct_coarse_cfo_hz = 0.0f;
+    if (ssb_pss_search_with_mdct(q, in, nof_samples, &mdct_N_id_2, &mdct_t_offset, &mdct_coarse_cfo_hz) < SRSRAN_SUCCESS) {
+      ERROR("Error searching for N_id_2");
+      return SRSRAN_ERROR;
+    }
+    if (ssb_pss_search(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
+      ERROR("Error searching for N_id_2");
+      return SRSRAN_ERROR;
+    }
+    printf("MDCT: N_id_2=%d, delay=%d, cfo=%f\n", mdct_N_id_2, mdct_t_offset, mdct_coarse_cfo_hz);
+    printf("Conv: N_id_2=%d, delay=%d, cfo=%f\n", N_id_2, t_offset, coarse_cfo_hz);
+  } else {
+    if (ssb_pss_search(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
+      ERROR("Error searching for N_id_2");
+      return SRSRAN_ERROR;
+    }
   }
 
   // Remove CP offset prior demodulation
@@ -1322,6 +1379,8 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
 
   // Select N_id
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
+
+  printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d\n", N_id, N_id_1, N_id_2, t_offset);
 
   // Select the most suitable SSB candidate
   uint32_t                n_hf      = 0;
