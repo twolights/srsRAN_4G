@@ -11,7 +11,7 @@
 // XXX copied from pss_nr.c, should be in a common header
 #define PSS_NR_SUBC_BEGIN 56
 
-static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_PSS_NR_LEN];
+static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
 
 // Prepare all time domain PSS sequences for all NID2's
 static void prepare_all_nr_pss_x() {
@@ -25,12 +25,16 @@ static void prepare_all_nr_pss_x() {
   uint32_t pss_loc_in_ssb = SRSRAN_PSS_NR_SYMBOL_IDX * SRSRAN_SSB_BW_SUBC + PSS_NR_SUBC_BEGIN;
   srsran_dft_plan_t ifft_plan;
   cf_t temp[SRSRAN_MDCT_PSS_FFT_SIZE];
+  int factor = floor(SRSRAN_MDCT_PSS_FFT_SIZE / SRSRAN_PSS_NR_LEN);
 
   // TODO: Could be optimized by multiplying the constant phase instead of computing the IFFT for each N_id_2
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
     srsran_pss_nr_put(ssb_grid, N_id_2, 1.0f);
     memset(temp, 0, SRSRAN_MDCT_PSS_FFT_SIZE * sizeof(cf_t));
-    memcpy(temp, &ssb_grid[pss_loc_in_ssb], SRSRAN_PSS_NR_LEN * sizeof(cf_t));
+    for (int i = 0; i < SRSRAN_PSS_NR_LEN; i++) {
+      temp[i * factor] = ssb_grid[pss_loc_in_ssb + i];
+    }
+//    memcpy(temp, &ssb_grid[pss_loc_in_ssb], SRSRAN_PSS_NR_LEN * sizeof(cf_t));
     srsran_dft_plan_c(&ifft_plan, SRSRAN_MDCT_PSS_FFT_SIZE, SRSRAN_DFT_BACKWARD);
     srsran_dft_run_c(&ifft_plan, temp, time_domain_pss[N_id_2]);
     srsran_dft_plan_free(&ifft_plan);

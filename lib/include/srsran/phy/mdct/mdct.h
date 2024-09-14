@@ -8,7 +8,7 @@
 #include <complex.h>
 #include "srsran/phy/sync/pss_nr.h"
 
-#define SRSRAN_MDCT_PSS_FFT_SIZE 128
+#define SRSRAN_MDCT_PSS_FFT_SIZE 8192
 #define SRSRAN_MDCT_RECOMMENDED_Q 1
 #define SRSRAN_MDCT_RECOMMENDED_PSI 6
 

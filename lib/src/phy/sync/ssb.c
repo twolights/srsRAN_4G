@@ -137,7 +137,9 @@ int srsran_ssb_init(srsran_ssb_t* q, const srsran_ssb_args_t* args)
 
   // MDCT
   // TODO make Q & PSI configurable
-  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->corr_sz, 1, 6) < SRSRAN_SUCCESS) {
+  // TODO use corr_sz instead of max_corr_sz
+  // if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->corr_sz, 1, 6) < SRSRAN_SUCCESS) {
+  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->max_corr_sz, 1, 6) < SRSRAN_SUCCESS) {
     ERROR("Error preparing PSS MDCT");
     return SRSRAN_ERROR;
   }
