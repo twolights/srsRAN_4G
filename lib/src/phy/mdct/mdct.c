@@ -92,9 +92,9 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t n, uint32_t Q, uin
     if (mdct->x_tilde[i] == NULL) {
       for (j = 0; j < i; j++) {
         free(mdct->x_tilde[j]);
-        free(mdct->temp);
-        free(mdct->output);
       }
+      free(mdct->temp);
+      free(mdct->output);
       return SRSRAN_ERROR;
     }
     for(j = 0; j < PSI; j++) {
@@ -130,12 +130,13 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
 
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
+                               uint32_t sample_sz,
                                srsran_pss_mdct_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
   for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
-    for (int32_t tau = 0; tau < nof_samples - mdct->n; tau++) {
+    for (int32_t tau = 0; tau < nof_samples - mdct->n; tau += sample_sz) {
       cf_t corr = calculate_C(mdct, in + tau, N_id_2, tau);
       float corr_mag = cabsf(corr);
       if (corr_mag > peak) {
