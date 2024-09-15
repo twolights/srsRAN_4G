@@ -882,7 +882,7 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
 
   srsran_pss_mdct_detect_res_t res;
 
-  if (mdct_detect_pss(&q->mdct, in, nof_samples, q->symbol_sz, &res) < SRSRAN_SUCCESS) {
+  if (mdct_detect_pss(&q->mdct, in, nof_samples, q->corr_window, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
   *found_N_id_2 = res.N_id_2;
@@ -1343,6 +1343,9 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
       ERROR("Error searching for N_id_2");
       return SRSRAN_ERROR;
     }
+//    N_id_2 = mdct_N_id_2;
+//    t_offset = mdct_t_offset;
+//    coarse_cfo_hz = mdct_coarse_cfo_hz;
     printf("MDCT: N_id_2=%d, delay=%d, cfo=%f\n", mdct_N_id_2, mdct_t_offset, mdct_coarse_cfo_hz);
     printf("Conv: N_id_2=%d, delay=%d, cfo=%f\n", N_id_2, t_offset, coarse_cfo_hz);
   } else {
@@ -1383,6 +1386,12 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
 
   printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d\n", N_id, N_id_1, N_id_2, t_offset);
+  time_t now = time(NULL);
+  char filename[100];
+  sprintf(filename, "ssb_%ld-NID2-%u-offset-%d.dat", now, N_id_2, t_offset);
+  FILE* f = fopen(filename, "wb");
+  fwrite(in, sizeof(cf_t), nof_samples, f);
+  fclose(f);
 
   // Select the most suitable SSB candidate
   uint32_t                n_hf      = 0;
