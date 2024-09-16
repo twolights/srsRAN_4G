@@ -111,7 +111,7 @@ static bool test_single_cell(int cfo)
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
-    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, &res);
+    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 1, &res);
     if (!print_test_result(N_id_2, tau, &res)) {
       result = false;
     }
@@ -149,7 +149,7 @@ static bool test_multiple_cells(int cfo)
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
-    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 1, &res);
+    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 64, &res);
     if (!print_test_result(N_id_2, tau, &res)) {
       result = false;
     }
