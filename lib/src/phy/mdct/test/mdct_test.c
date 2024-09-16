@@ -4,7 +4,7 @@
 #include "srsran/phy/mdct/mdct.h"
 #include <string.h>
 
-static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
+//static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
 static srsran_pss_mdct_t mdct;
 
 #define SAMPLING_FREQUENCY 30.72e6
@@ -43,24 +43,14 @@ static int TEST_DATA_MULTIPLE_CELLS[NUM_MULTIPLE_CELL_TESTS][8] = {
   {2, 60, 0, 10, 30, 1, 0, 10},
 };
 
-void get_time_domain_pss(cf_t* out, uint32_t N_id_2);
-
-static void prepare_all_time_domain_pss()
-{
-  int i;
-  for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
-    get_time_domain_pss(time_domain_pss[i], i);
-  }
-}
-
-static void append_pss(cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
+static void append_pss(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
 {
   for (int i = 0; i < SRSRAN_MDCT_PSS_FFT_SIZE; i++) {
-    buffer[tau + i] += time_domain_pss[N_id_2][i] * beta / 100.0;
+    buffer[tau + i] += mdct->pss_x[N_id_2][i] * beta / 100.0;
   }
 }
 
-static void prepare_mocked_received_samples(cf_t* buffer, uint32_t N_id_2, int32_t tau, bool add_noise)
+static void prepare_mocked_received_samples(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, bool add_noise)
 {
   if (add_noise) {
     memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
@@ -68,7 +58,7 @@ static void prepare_mocked_received_samples(cf_t* buffer, uint32_t N_id_2, int32
   } else {
     memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
   }
-  memcpy(buffer + tau, time_domain_pss[N_id_2], SRSRAN_MDCT_PSS_FFT_SIZE * sizeof(cf_t));
+  memcpy(buffer + tau, mdct->pss_x[N_id_2], SRSRAN_MDCT_PSS_FFT_SIZE * sizeof(cf_t));
 }
 
 static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offset_in_hz, int sampling_frequency_in_hz)
@@ -107,7 +97,7 @@ static bool test_single_cell(int cfo)
     N_id_2 = TEST_DATA[i][0];
     tau    = TEST_DATA[i][1];
     printf("Test %d/%d ", i + 1, NUM_SINGLE_CELL_TESTS);
-    prepare_mocked_received_samples(buffer, N_id_2, tau, false);
+    prepare_mocked_received_samples(&mdct, buffer, N_id_2, tau, false);
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
@@ -134,7 +124,7 @@ static bool test_multiple_cells(int cfo)
     N_id_2 = row[0];
     tau = row[1];
     printf("Test %d/%d ", i + 1, NUM_MULTIPLE_CELL_TESTS);
-    prepare_mocked_received_samples(buffer, N_id_2, tau, true);
+    prepare_mocked_received_samples(&mdct, buffer, N_id_2, tau, true);
     adjacent_cells[0] = row + ADJACENT_CELL_TEST_START;
     adjacent_cells[1] = row + ADJACENT_CELL_TEST_START + ADJACENT_CELL_TEST_SIZE;
     for (j = 0; j < NUM_ADJACENT_CELLS; j++) {
@@ -144,12 +134,12 @@ static bool test_multiple_cells(int cfo)
       if (beta <= 0) {
         continue;
       }
-      append_pss(buffer, adjacent_N_id_2, adjacent_tau, beta);
+      append_pss(&mdct, buffer, adjacent_N_id_2, adjacent_tau, beta);
     }
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
-    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 64, &res);
+    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 1, &res);
     if (!print_test_result(N_id_2, tau, &res)) {
       result = false;
     }
@@ -158,8 +148,10 @@ static bool test_multiple_cells(int cfo)
 }
 
 int main() {
-  prepare_all_time_domain_pss();
-  srsran_prepare_pss_mdct(&mdct, SRSRAN_MDCT_PSS_FFT_SIZE,
+//  prepare_all_time_domain_pss();
+  srsran_prepare_pss_mdct(&mdct,
+                          1536,
+                          SRSRAN_MDCT_PSS_FFT_SIZE,
                           SRSRAN_MDCT_RECOMMENDED_Q,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
   if(!test_single_cell(0)) {
