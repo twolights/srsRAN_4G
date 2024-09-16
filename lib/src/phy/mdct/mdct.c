@@ -66,17 +66,39 @@ static cf_t calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N
 }
 
 // x_tilde_{n,d}^{r}: d: delay, r: NID2
-static void get_x_tilde(cf_t* out, uint32_t n, int32_t d, uint32_t r)
+//static void fill_x_tilde(cf_t* out, uint32_t symbol_sz, uint32_t n, int32_t d, uint32_t r)
+static void fill_x_tilde(srsran_pss_mdct_t* mdct, uint32_t r, uint32_t psi)
 {
-  prepare_all_nr_pss_x();
+  uint32_t d = (uint32_t)(1 + (mdct->Q * psi));
   // TODO: Should be optimized by multiplying the constant phase instead of computing the diff. product for each N_id_2
-  differential_product(time_domain_pss[r], out, d, n);
+  differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], d, n);
+}
+
+static void prepare_pss_x(srsran_pss_mdct_t* mdct)
+{
+  cf_t ssb_grid[SRSRAN_SSB_NOF_RE];
+  cf_t* pss_in_ssb = &ssb_grid[SRSRAN_PSS_NR_SYMBOL_IDX * SRSRAN_SSB_BW_SUBC];
+  int N_id_2;
+  srsran_dft_plan_t ifft_plan;
+  srsran_dft_plan_c(&ifft_plan, n, SRSRAN_DFT_BACKWARD);
+  for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
+    mdct->pss_x[N_id_2] = (cf_t*)malloc(mdct->n * sizeof(cf_t));
+    srsran_vec_cf_zero(mdct->temp, mdct->n);
+    srsran_pss_nr_put(ssb_grid, N_id_2, 1.0f);
+    srsran_vec_cf_copy(&mdct->temp[0],
+                       &pss_in_ssb[SRSRAN_SSB_BW_SUBC / 2],
+                       SRSRAN_SSB_BW_SUBC / 2);
+    srsran_vec_cf_copy(&mdct->temp[mdct->symbol_sz - SRSRAN_SSB_BW_SUBC / 2],
+                       &pss_in_ssb[0],
+                       SRSRAN_SSB_BW_SUBC / 2);
+    srsran_dft_run_c(&ifft_plan, mdct->temp, mdct->pss_x[N_id_2]);
+  }
+  srsran_dft_plan_free(&ifft_plan);
 }
 
 int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t n, uint32_t Q, uint32_t PSI)
 {
   int i, j;
-  int32_t d;
   mdct->output = (cf_t*)malloc(n * sizeof(cf_t));
   if (mdct->output == NULL) {
     return SRSRAN_ERROR;
@@ -86,6 +108,7 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t n, uint32_t Q, uin
     free(mdct->output);
     return SRSRAN_ERROR;
   }
+  prepare_pss_x(mdct);
   for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
     mdct->x_tilde[i] = (cf_t**)malloc(PSI * sizeof(cf_t*));
     if (mdct->x_tilde[i] == NULL) {
@@ -99,8 +122,7 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t n, uint32_t Q, uin
     for(j = 0; j < PSI; j++) {
       mdct->x_tilde[i][j] = (cf_t*)malloc(n * sizeof(cf_t));
       // TODO error handling
-      d = (int32_t)(1 + Q * j);
-      get_x_tilde(mdct->x_tilde[i][j], n, d, i);
+      fill_x_tilde(mdct, i, j);
     }
   }
   mdct->n = n;
@@ -119,6 +141,7 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
       free(mdct->x_tilde[i][j]);
     }
     free(mdct->x_tilde[i]);
+    free(mdct->pss_x[i]);
   }
   free(mdct->temp);
   mdct->temp = NULL;
