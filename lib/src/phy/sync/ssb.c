@@ -134,15 +134,6 @@ int srsran_ssb_init(srsran_ssb_t* q, const srsran_ssb_args_t* args)
   if (ssb_init_pbch(q) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
-
-  // MDCT
-  // TODO make Q & PSI configurable
-  // TODO use corr_sz instead of max_corr_sz
-  // if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->corr_sz, 1, 6) < SRSRAN_SUCCESS) {
-  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->symbol_sz, q->max_corr_sz, q->max_symbol_sz, 6) < SRSRAN_SUCCESS) {
-    ERROR("Error preparing PSS MDCT");
-    return SRSRAN_ERROR;
-  }
   return SRSRAN_SUCCESS;
 }
 
@@ -413,6 +404,14 @@ static int ssb_setup_corr(srsran_ssb_t* q)
 
     // Copy frequency domain sequence
     srsran_vec_cf_copy(q->pss_seq[N_id_2], q->tmp_freq, q->corr_sz);
+  }
+
+  // MDCT
+  // TODO make Q & PSI configurable
+  // TODO use corr_sz instead of max_corr_sz
+  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->symbol_sz, q->corr_sz, 2, 6) < SRSRAN_SUCCESS) {
+    ERROR("Error preparing PSS MDCT");
+    return SRSRAN_ERROR;
   }
 
   return SRSRAN_SUCCESS;
@@ -882,7 +881,7 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
 
   srsran_pss_mdct_detect_res_t res;
 
-  if (mdct_detect_pss(&q->mdct, in, nof_samples, q->corr_window, &res) < SRSRAN_SUCCESS) {
+  if (mdct_detect_pss(&q->mdct, in, nof_samples, q->symbol_sz, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
   *found_N_id_2 = res.N_id_2;
