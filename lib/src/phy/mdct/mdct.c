@@ -23,7 +23,7 @@ static cf_t calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N
 {
   cf_t result = 0.0;
   for (int psi = 0; psi < mdct->PSI; psi++) {
-    result += calculate_D(y, mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->output, mdct->n, mdct->Q, psi);
+    result += calculate_D(y, mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->output, mdct->symbol_sz, mdct->Q, psi);
   }
   return result / (float)mdct->PSI;
 }
@@ -34,7 +34,7 @@ static void fill_x_tilde(srsran_pss_mdct_t* mdct, uint32_t r, uint32_t psi)
 {
   uint32_t d = (uint32_t)(1 + (mdct->Q * psi));
   // TODO: Should be optimized by multiplying the constant phase instead of computing the diff. product for each N_id_2
-  differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], d, mdct->n);
+  differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], (int)d, mdct->symbol_sz);
 }
 
 static void prepare_pss_x(srsran_pss_mdct_t* mdct)
@@ -43,19 +43,20 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct)
   cf_t* pss_in_ssb = &ssb_grid[SRSRAN_PSS_NR_SYMBOL_IDX * SRSRAN_SSB_BW_SUBC];
   int N_id_2;
   srsran_dft_plan_t ifft_plan;
+  int32_t f_offset = -30;
 //  srsran_dft_plan_c(&ifft_plan, mdct->n, SRSRAN_DFT_BACKWARD);
   // TODO: Could be optimized by multiplying the constant phase instead of computing the IFFT for each N_id_2
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
-    mdct->pss_x[N_id_2] = (cf_t*)malloc(mdct->n * sizeof(cf_t));
-    srsran_dft_plan_guru_c(&ifft_plan, (int)mdct->n, SRSRAN_DFT_BACKWARD, mdct->temp, mdct->pss_x[N_id_2], 1, 1, 1, 1, 1);
-    srsran_vec_cf_zero(mdct->temp, mdct->n);
+    mdct->pss_x[N_id_2] = (cf_t*)malloc(mdct->symbol_sz * sizeof(cf_t));
+    srsran_dft_plan_guru_c(&ifft_plan, (int)mdct->symbol_sz, SRSRAN_DFT_BACKWARD, mdct->temp, mdct->pss_x[N_id_2], 1, 1, 1, 1, 1);
+    srsran_vec_cf_zero(mdct->temp, mdct->symbol_sz);
     srsran_pss_nr_put(ssb_grid, N_id_2, 1.0f);
     srsran_vec_cf_copy(&mdct->temp[0],
-                       &pss_in_ssb[SRSRAN_SSB_BW_SUBC / 2],
-                       SRSRAN_SSB_BW_SUBC / 2);
-    srsran_vec_cf_copy(&mdct->temp[mdct->symbol_sz - SRSRAN_SSB_BW_SUBC / 2],
+                       &pss_in_ssb[SRSRAN_SSB_BW_SUBC / 2 - f_offset],
+                       SRSRAN_SSB_BW_SUBC / 2 + f_offset);
+    srsran_vec_cf_copy(&mdct->temp[mdct->symbol_sz - SRSRAN_SSB_BW_SUBC / 2 + f_offset],
                        &pss_in_ssb[0],
-                       SRSRAN_SSB_BW_SUBC / 2);
+                       SRSRAN_SSB_BW_SUBC / 2 - f_offset);
 //    srsran_dft_run_c(&ifft_plan, mdct->temp, mdct->pss_x[N_id_2]);
     srsran_dft_run_guru_c(&ifft_plan);
     srsran_dft_plan_free(&ifft_plan);
@@ -63,18 +64,18 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct)
 //  srsran_dft_plan_free(&ifft_plan);
 }
 
-int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t n, uint32_t Q, uint32_t PSI)
+int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t Q, uint32_t PSI)
 {
   int i, j;
   mdct->symbol_sz = symbol_sz;
-  mdct->n = n;
   mdct->Q = Q;
   mdct->PSI = PSI;
-  mdct->output = (cf_t*)malloc(n * sizeof(cf_t));
+  mdct->output = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
+  mdct->debug = false;
   if (mdct->output == NULL) {
     return SRSRAN_ERROR;
   }
-  mdct->temp = (cf_t*)malloc(n * sizeof(cf_t));
+  mdct->temp = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
   if (mdct->temp == NULL) {
     free(mdct->output);
     return SRSRAN_ERROR;
@@ -91,7 +92,7 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_
       return SRSRAN_ERROR;
     }
     for(j = 0; j < PSI; j++) {
-      mdct->x_tilde[i][j] = (cf_t*)malloc(n * sizeof(cf_t));
+      mdct->x_tilde[i][j] = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
       // TODO error handling
       fill_x_tilde(mdct, i, j);
     }
@@ -118,6 +119,8 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   return SRSRAN_SUCCESS;
 }
 
+// TODO implement conventional correlation here
+
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
                                uint32_t window_sz,
@@ -126,9 +129,12 @@ SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
   float peak = -1 * INFINITY;
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
   for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
-    for (int32_t tau = 0; tau < nof_samples - mdct->n; tau += (int)window_sz) {
+    for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
       cf_t corr = calculate_C(mdct, in + tau, N_id_2, tau);
       float corr_mag = cabsf(corr);
+      if(mdct->debug) {
+        printf("N_id_2=%d, tau=%d, corr_mag=%f\n", N_id_2, tau, corr_mag);
+      }
       if (corr_mag > peak) {
         peak = corr_mag;
         result->tau = tau;

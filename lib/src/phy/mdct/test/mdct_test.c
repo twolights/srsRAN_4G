@@ -2,13 +2,15 @@
 // Created by ykchen on 9/12/24.
 //
 #include "srsran/phy/mdct/mdct.h"
+#include <stdlib.h>
 #include <string.h>
 
-//static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
+// static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
 static srsran_pss_mdct_t mdct;
 
 #define SAMPLING_FREQUENCY 30.72e6
-#define NOF_SAMPLES (SRSRAN_MDCT_PSS_FFT_SIZE + 100)
+#define SYMBOL_SIZE 1536
+#define NOF_SAMPLES (SYMBOL_SIZE + 120)
 #define NUM_SINGLE_CELL_TESTS 9
 #define NUM_MULTIPLE_CELL_TESTS 9
 #define ADJACENT_CELL_TEST_START 2
@@ -45,7 +47,7 @@ static int TEST_DATA_MULTIPLE_CELLS[NUM_MULTIPLE_CELL_TESTS][8] = {
 
 static void append_pss(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
 {
-  for (int i = 0; i < SRSRAN_MDCT_PSS_FFT_SIZE; i++) {
+  for (int i = 0; i < mdct->symbol_sz; i++) {
     buffer[tau + i] += mdct->pss_x[N_id_2][i] * beta / 100.0;
   }
 }
@@ -58,7 +60,7 @@ static void prepare_mocked_received_samples(srsran_pss_mdct_t* mdct, cf_t* buffe
   } else {
     memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
   }
-  memcpy(buffer + tau, mdct->pss_x[N_id_2], SRSRAN_MDCT_PSS_FFT_SIZE * sizeof(cf_t));
+  memcpy(buffer + tau, mdct->pss_x[N_id_2], mdct->symbol_sz * sizeof(cf_t));
 }
 
 static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offset_in_hz, int sampling_frequency_in_hz)
@@ -147,25 +149,53 @@ static bool test_multiple_cells(int cfo)
   return result;
 }
 
-int main() {
-//  prepare_all_time_domain_pss();
-  srsran_prepare_pss_mdct(&mdct,
-                          1536,
-                          SRSRAN_MDCT_PSS_FFT_SIZE,
-                          SRSRAN_MDCT_RECOMMENDED_Q,
-                          SRSRAN_MDCT_RECOMMENDED_PSI);
+static void test_mdct_on_samples(const char* filename)
+{
+  size_t l = 29953;
+  cf_t* buffer = (cf_t*)malloc(l * sizeof(cf_t));
+  FILE* fp = fopen(filename, "rb");
+  fread(buffer, sizeof(cf_t), l, fp);
+  fclose(fp);
+
+  srsran_pss_mdct_detect_res_t res;
+  mdct.debug = true;
+  mdct_detect_pss(&mdct, buffer, l, 1, &res);
+  printf("MDCT: Detected N_id_2=%d, tau=%d\n", res.N_id_2, res.tau);
+  free(buffer);
+}
+
+static int test_cells(bool perform) {
+  if(!perform) {
+    return 0;
+  }
+  int result = 0;
   if(!test_single_cell(0)) {
-//    return -1;
+    result = -1;
   };
   if(!test_single_cell(20000)) {
-//    return -1;
+    result = -1;
   }
   if(!test_multiple_cells(0)) {
-//    return -1;
+    result = -1;
   }
   if(!test_multiple_cells(20000)) {
-//    return -1;
+    result = -1;
+  }
+  return result;
+}
+
+int main() {
+  int result = 0;
+  srsran_prepare_pss_mdct(&mdct,
+                          SYMBOL_SIZE,
+                          SRSRAN_MDCT_RECOMMENDED_Q,
+                          SRSRAN_MDCT_RECOMMENDED_PSI);
+  result = test_cells(true);
+  mdct.debug = true;
+  printf("complex float size: %lu\n", sizeof(cf_t));
+  if(false) {
+    test_mdct_on_samples("ssb_1726495284-NID2-1-offset-3600.dat");
   }
   srsran_destroy_pss_mdct(&mdct);
-  return 0;
+  return result;
 }

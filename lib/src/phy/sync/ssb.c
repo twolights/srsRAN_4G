@@ -48,7 +48,7 @@
  */
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
-static bool use_mdct = true;
+static bool use_mdct = false; // true;
 
 static int ssb_init_corr(srsran_ssb_t* q)
 {
@@ -408,8 +408,7 @@ static int ssb_setup_corr(srsran_ssb_t* q)
 
   // MDCT
   // TODO make Q & PSI configurable
-  // TODO use corr_sz instead of max_corr_sz
-  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->symbol_sz, q->corr_sz, 2, 6) < SRSRAN_SUCCESS) {
+  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->symbol_sz, SRSRAN_MDCT_RECOMMENDED_Q, SRSRAN_MDCT_RECOMMENDED_PSI) < SRSRAN_SUCCESS) {
     ERROR("Error preparing PSS MDCT");
     return SRSRAN_ERROR;
   }

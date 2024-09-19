@@ -8,7 +8,6 @@
 #include <complex.h>
 #include "srsran/phy/sync/pss_nr.h"
 
-#define SRSRAN_MDCT_PSS_FFT_SIZE 8192
 #define SRSRAN_MDCT_RECOMMENDED_Q 1
 #define SRSRAN_MDCT_RECOMMENDED_PSI 6
 
@@ -18,9 +17,9 @@ typedef struct SRSRAN_API {
   cf_t* temp;
   cf_t* output;
   uint32_t symbol_sz;
-  uint32_t n;
   uint32_t Q;
   uint32_t PSI;
+  bool debug;
 } srsran_pss_mdct_t;
 
 typedef struct SRSRAN_API {
@@ -29,9 +28,7 @@ typedef struct SRSRAN_API {
   float     peak_value;
 } srsran_pss_mdct_detect_res_t;
 
-SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
-                                       uint32_t symbol_sz, uint32_t n,
-                                       uint32_t Q, uint32_t PSI);
+SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t Q, uint32_t PSI);
 SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct);
 // TODO rename
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
