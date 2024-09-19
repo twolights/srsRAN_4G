@@ -43,7 +43,7 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct)
   cf_t* pss_in_ssb = &ssb_grid[SRSRAN_PSS_NR_SYMBOL_IDX * SRSRAN_SSB_BW_SUBC];
   int N_id_2;
   srsran_dft_plan_t ifft_plan;
-  int32_t f_offset = -30;
+  int32_t f_offset = 0; // -30;
 //  srsran_dft_plan_c(&ifft_plan, mdct->n, SRSRAN_DFT_BACKWARD);
   // TODO: Could be optimized by multiplying the constant phase instead of computing the IFFT for each N_id_2
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
@@ -119,7 +119,26 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   return SRSRAN_SUCCESS;
 }
 
-// TODO implement conventional correlation here
+SRSRAN_API int correlation_detect_pss(const srsran_pss_mdct_t* mdct,
+                                      const cf_t* in, uint32_t nof_samples,
+                                      uint32_t window_sz,
+                                      srsran_pss_detect_res_t* result)
+{
+  float peak = -1 * INFINITY;
+  for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
+    for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
+      srsran_vec_prod_conj_ccc(&in[tau], mdct->pss_x[N_id_2], mdct->temp, mdct->symbol_sz);
+      float corr_mag = srsran_vec_acc_cc(mdct->temp, mdct->symbol_sz);
+      if (corr_mag > peak) {
+        peak = corr_mag;
+        result->tau = tau;
+        result->N_id_2 = N_id_2;
+        result->peak_value = peak;
+      }
+    }
+  }
+  return SRSRAN_SUCCESS;
+}
 
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
