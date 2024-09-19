@@ -37,7 +37,7 @@ SRSRAN_API int correlation_detect_pss(const srsran_pss_mdct_t* mdct,
 // TODO rename
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
-                               uint32_t sample_sz,
+                               uint32_t window_sz,
                                srsran_pss_detect_res_t* result);
 
 #endif // SRSRAN_MDCT_H
