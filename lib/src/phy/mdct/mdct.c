@@ -43,12 +43,11 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct)
   cf_t* pss_in_ssb = &ssb_grid[SRSRAN_PSS_NR_SYMBOL_IDX * SRSRAN_SSB_BW_SUBC];
   int N_id_2;
   srsran_dft_plan_t ifft_plan;
-  int32_t f_offset = 0; // -30;
-//  srsran_dft_plan_c(&ifft_plan, mdct->n, SRSRAN_DFT_BACKWARD);
+  int32_t f_offset = -30;
+  srsran_dft_plan_c(&ifft_plan, mdct->symbol_sz, SRSRAN_DFT_BACKWARD);
   // TODO: Could be optimized by multiplying the constant phase instead of computing the IFFT for each N_id_2
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
     mdct->pss_x[N_id_2] = (cf_t*)malloc(mdct->symbol_sz * sizeof(cf_t));
-    srsran_dft_plan_guru_c(&ifft_plan, (int)mdct->symbol_sz, SRSRAN_DFT_BACKWARD, mdct->temp, mdct->pss_x[N_id_2], 1, 1, 1, 1, 1);
     srsran_vec_cf_zero(mdct->temp, mdct->symbol_sz);
     srsran_pss_nr_put(ssb_grid, N_id_2, 1.0f);
     srsran_vec_cf_copy(&mdct->temp[0],
@@ -57,11 +56,9 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct)
     srsran_vec_cf_copy(&mdct->temp[mdct->symbol_sz - SRSRAN_SSB_BW_SUBC / 2 + f_offset],
                        &pss_in_ssb[0],
                        SRSRAN_SSB_BW_SUBC / 2 - f_offset);
-//    srsran_dft_run_c(&ifft_plan, mdct->temp, mdct->pss_x[N_id_2]);
-    srsran_dft_run_guru_c(&ifft_plan);
-    srsran_dft_plan_free(&ifft_plan);
+    srsran_dft_run_c(&ifft_plan, mdct->temp, mdct->pss_x[N_id_2]);
   }
-//  srsran_dft_plan_free(&ifft_plan);
+  srsran_dft_plan_free(&ifft_plan);
 }
 
 int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t Q, uint32_t PSI)
