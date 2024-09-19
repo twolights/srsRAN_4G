@@ -70,7 +70,7 @@ static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offse
   }
 }
 
-static bool print_test_result(int N_id_2, int tau, srsran_pss_mdct_detect_res_t* res)
+static bool print_test_result(int N_id_2, int tau, srsran_pss_detect_res_t* res)
 {
   if (res->tau == tau && res->N_id_2 == N_id_2) {
     printf("passed for N_id_2=%d, tau=%d\n", N_id_2, tau);
@@ -91,7 +91,7 @@ static bool test_single_cell(int cfo)
 {
   cf_t buffer[NOF_SAMPLES];
   int i, N_id_2, tau;
-  srsran_pss_mdct_detect_res_t res;
+  srsran_pss_detect_res_t res;
   bool result = true;
 
   printf("MDCT: Running single cell tests, without noise, CFO=%dHz\n", cfo);
@@ -115,7 +115,7 @@ static bool test_multiple_cells(int cfo)
 {
   cf_t buffer[NOF_SAMPLES];
   int i, j, N_id_2, tau, adjacent_N_id_2, adjacent_tau, beta;
-  srsran_pss_mdct_detect_res_t res;
+  srsran_pss_detect_res_t res;
   bool result = true;
   int* row;
   int* adjacent_cells[2];
@@ -157,7 +157,7 @@ static void test_mdct_on_samples(const char* filename)
   fread(buffer, sizeof(cf_t), l, fp);
   fclose(fp);
 
-  srsran_pss_mdct_detect_res_t res;
+  srsran_pss_detect_res_t res;
   mdct.debug = true;
   mdct_detect_pss(&mdct, buffer, l, 1, &res);
   printf("MDCT: Detected N_id_2=%d, tau=%d\n", res.N_id_2, res.tau);

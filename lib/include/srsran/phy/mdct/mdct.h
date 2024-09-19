@@ -26,7 +26,7 @@ typedef struct SRSRAN_API {
   int32_t   tau;        // time offset
   uint32_t  N_id_2;
   float     peak_value;
-} srsran_pss_mdct_detect_res_t;
+} srsran_pss_detect_res_t;
 
 SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t Q, uint32_t PSI);
 SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct);
@@ -34,6 +34,6 @@ SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct);
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
                                uint32_t sample_sz,
-                               srsran_pss_mdct_detect_res_t* result);
+                               srsran_pss_detect_res_t* result);
 
 #endif // SRSRAN_MDCT_H

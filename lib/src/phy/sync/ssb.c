@@ -878,7 +878,7 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
   // Calculate correlation CFO coarse precision
 //  double coarse_cfo_ref_hz = (q->cfg.srate_hz / q->corr_sz);
 
-  srsran_pss_mdct_detect_res_t res;
+  srsran_pss_detect_res_t res;
 
   if (mdct_detect_pss(&q->mdct, in, nof_samples, q->symbol_sz, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;

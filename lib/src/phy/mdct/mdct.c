@@ -124,7 +124,7 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
 SRSRAN_API int mdct_detect_pss(const srsran_pss_mdct_t* mdct,
                                const cf_t* in, uint32_t nof_samples,
                                uint32_t window_sz,
-                               srsran_pss_mdct_detect_res_t* result)
+                               srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
