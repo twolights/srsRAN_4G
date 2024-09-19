@@ -37,13 +37,12 @@ static void fill_x_tilde(srsran_pss_mdct_t* mdct, uint32_t r, uint32_t psi)
   differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], (int)d, mdct->symbol_sz);
 }
 
-static void prepare_pss_x(srsran_pss_mdct_t* mdct)
+static void prepare_pss_x(srsran_pss_mdct_t* mdct, int32_t f_offset)
 {
   cf_t ssb_grid[SRSRAN_SSB_NOF_RE];
   cf_t* pss_in_ssb = &ssb_grid[SRSRAN_PSS_NR_SYMBOL_IDX * SRSRAN_SSB_BW_SUBC];
   int N_id_2;
   srsran_dft_plan_t ifft_plan;
-  int32_t f_offset = -30;
   srsran_dft_plan_c(&ifft_plan, mdct->symbol_sz, SRSRAN_DFT_BACKWARD);
   // TODO: Could be optimized by multiplying the constant phase instead of computing the IFFT for each N_id_2
   for (N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
@@ -61,10 +60,13 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct)
   srsran_dft_plan_free(&ifft_plan);
 }
 
-int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t Q, uint32_t PSI)
+int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
+                            uint32_t symbol_sz, int32_t f_offset,
+                            uint32_t Q, uint32_t PSI)
 {
   int i, j;
   mdct->symbol_sz = symbol_sz;
+  mdct->f_offset = f_offset;
   mdct->Q = Q;
   mdct->PSI = PSI;
   mdct->output = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
@@ -77,7 +79,7 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_
     free(mdct->output);
     return SRSRAN_ERROR;
   }
-  prepare_pss_x(mdct);
+  prepare_pss_x(mdct, f_offset);
   for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
     mdct->x_tilde[i] = (cf_t**)malloc(PSI * sizeof(cf_t*));
     if (mdct->x_tilde[i] == NULL) {

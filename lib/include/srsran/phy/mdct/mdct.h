@@ -17,6 +17,7 @@ typedef struct SRSRAN_API {
   cf_t* temp;
   cf_t* output;
   uint32_t symbol_sz;
+  int32_t f_offset;
   uint32_t Q;
   uint32_t PSI;
   bool debug;
@@ -28,7 +29,9 @@ typedef struct SRSRAN_API {
   float     peak_value;
 } srsran_pss_detect_res_t;
 
-SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct, uint32_t symbol_sz, uint32_t Q, uint32_t PSI);
+SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
+                                        uint32_t symbol_sz, int32_t f_offset,
+                                        uint32_t Q, uint32_t PSI);
 SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct);
 SRSRAN_API int correlation_detect_pss(const srsran_pss_mdct_t* mdct,
                                       const cf_t* in, uint32_t nof_samples,

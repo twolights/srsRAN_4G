@@ -222,7 +222,7 @@ static int test_cells(bool perform) {
 int main() {
   int result = 0;
   srsran_prepare_pss_mdct(&mdct,
-                          SYMBOL_SIZE,
+                          SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
   result = test_cells(true);
