@@ -8,6 +8,9 @@
 // static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
 static srsran_pss_mdct_t mdct;
 
+#define DETECTION_METHOD_CORRELATION 0
+#define DETECTION_METHOD_MDCT 1
+
 #define SAMPLING_FREQUENCY 30.72e6
 #define SYMBOL_SIZE 1536
 #define NOF_SAMPLES (SYMBOL_SIZE + 120)
@@ -87,14 +90,29 @@ static bool print_test_result(int N_id_2, int tau, srsran_pss_detect_res_t* res)
   return false;
 }
 
-static bool test_single_cell(int cfo)
+static void detect_pss(const cf_t* in, uint32_t nof_samples,
+                       uint32_t window_sz, srsran_pss_detect_res_t* result,
+                       int method)
+{
+  if(method == DETECTION_METHOD_MDCT) {
+    mdct_detect_pss(&mdct, in, nof_samples, window_sz, result);
+  } else {
+    correlation_detect_pss(&mdct, in, nof_samples, window_sz, result);
+  }
+}
+
+static bool test_single_cell(int cfo, int method)
 {
   cf_t buffer[NOF_SAMPLES];
   int i, N_id_2, tau;
   srsran_pss_detect_res_t res;
   bool result = true;
 
-  printf("MDCT: Running single cell tests, without noise, CFO=%dHz\n", cfo);
+  if(method == DETECTION_METHOD_MDCT) {
+    printf("MDCT: Running single cell tests, without noise, CFO=%dHz\n", cfo);
+  } else {
+    printf("Correlation: Running single cell tests, without noise, CFO=%dHz\n", cfo);
+  }
   for (i = 0; i < NUM_SINGLE_CELL_TESTS; i++) {
     N_id_2 = TEST_DATA[i][0];
     tau    = TEST_DATA[i][1];
@@ -103,7 +121,7 @@ static bool test_single_cell(int cfo)
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
-    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 1, &res);
+    detect_pss(buffer, NOF_SAMPLES, 1, &res, method);
     if (!print_test_result(N_id_2, tau, &res)) {
       result = false;
     }
@@ -111,7 +129,7 @@ static bool test_single_cell(int cfo)
   return result;
 }
 
-static bool test_multiple_cells(int cfo)
+static bool test_multiple_cells(int cfo, int method)
 {
   cf_t buffer[NOF_SAMPLES];
   int i, j, N_id_2, tau, adjacent_N_id_2, adjacent_tau, beta;
@@ -120,7 +138,11 @@ static bool test_multiple_cells(int cfo)
   int* row;
   int* adjacent_cells[2];
 
-  printf("MDCT: Running multiple cells tests, with noise, CFO=%dHz\n", cfo);
+  if(method == DETECTION_METHOD_MDCT) {
+    printf("MDCT: Running multiple cells tests, without noise, CFO=%dHz\n", cfo);
+  } else {
+    printf("Correlation: Running multiple cells tests, without noise, CFO=%dHz\n", cfo);
+  }
   for(i = 0; i < NUM_MULTIPLE_CELL_TESTS; i++) {
     row = TEST_DATA_MULTIPLE_CELLS[i];
     N_id_2 = row[0];
@@ -141,7 +163,7 @@ static bool test_multiple_cells(int cfo)
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
-    mdct_detect_pss(&mdct, buffer, NOF_SAMPLES, 1, &res);
+    detect_pss(buffer, NOF_SAMPLES, 1, &res, method);
     if (!print_test_result(N_id_2, tau, &res)) {
       result = false;
     }
@@ -161,6 +183,7 @@ static void test_mdct_on_samples(const char* filename)
   mdct.debug = true;
   mdct_detect_pss(&mdct, buffer, l, 1, &res);
   printf("MDCT: Detected N_id_2=%d, tau=%d\n", res.N_id_2, res.tau);
+//  correlation_detect_pss(&mdct, buffer, l, 1, &res);
   free(buffer);
 }
 
@@ -169,16 +192,28 @@ static int test_cells(bool perform) {
     return 0;
   }
   int result = 0;
-  if(!test_single_cell(0)) {
+  if(!test_single_cell(0, DETECTION_METHOD_MDCT)) {
     result = -1;
   };
-  if(!test_single_cell(20000)) {
+  if(!test_single_cell(20000, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
-  if(!test_multiple_cells(0)) {
+  if(!test_multiple_cells(0, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
-  if(!test_multiple_cells(20000)) {
+  if(!test_multiple_cells(20000, DETECTION_METHOD_MDCT)) {
+    result = -1;
+  }
+  if(!test_single_cell(0, DETECTION_METHOD_CORRELATION)) {
+    result = -1;
+  };
+  if(test_single_cell(20000, DETECTION_METHOD_CORRELATION)) {
+    result = -1;
+  }
+  if(!test_multiple_cells(0, DETECTION_METHOD_CORRELATION)) {
+    result = -1;
+  }
+  if(test_multiple_cells(20000, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
   return result;
