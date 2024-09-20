@@ -127,7 +127,10 @@ SRSRAN_API int correlation_detect_pss(const srsran_pss_mdct_t* mdct,
   for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
     for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
       srsran_vec_prod_conj_ccc(&in[tau], mdct->pss_x[N_id_2], mdct->temp, mdct->symbol_sz);
-      float corr_mag = srsran_vec_acc_cc(mdct->temp, mdct->symbol_sz);
+      float corr_mag = cabsf(srsran_vec_acc_cc(mdct->temp, mdct->symbol_sz));
+      if(mdct->debug) {
+        printf("N_id_2=%d, tau=%d, corr_mag=%f\n", N_id_2, tau, corr_mag);
+      }
       if (corr_mag > peak) {
         peak = corr_mag;
         result->tau = tau;
