@@ -30,6 +30,10 @@ bool test_on_sequence()
   cf_t c[N];
   int32_t d = 1;
   differential_product(a, c, d, N);
+  if(creal(c[0]) != 4 || cimag(c[0]) != 0 || creal(c[9]) != 20 || cimag(c[9]) != 0) {
+    printf("Test on sequence failed\n");
+    return false;
+  }
   return true;
 }
 

@@ -13,7 +13,7 @@ static srsran_pss_mdct_t mdct;
 
 #define SAMPLING_FREQUENCY 30.72e6
 #define SYMBOL_SIZE 1536
-#define NOF_SAMPLES (SYMBOL_SIZE + 120)
+#define NOF_SAMPLES (SYMBOL_SIZE * 2)
 #define NUM_SINGLE_CELL_TESTS 9
 #define NUM_MULTIPLE_CELL_TESTS 9
 #define ADJACENT_CELL_TEST_START 2
@@ -25,27 +25,27 @@ static int TEST_DATA[NUM_SINGLE_CELL_TESTS][2] = {
     {0, 0},
     {1, 0},
     {2, 0},
-    {0, 20},
-    {1, 5},
-    {2, 15},
-    {0, 19},
-    {1, 7},
-    {2, 8},
+    {0, 200},
+    {1, 100},
+    {2, 150},
+    {0, 400},
+    {1, 700},
+    {2, 800},
 };
 
 // Test data for multiple cell tests, each row contains:
 // {Correct N_id_2, tau, N_id_2, tau, beta, N_id_2, tau, beta}
 // Beta represents signal strength, ranges from 0 to 99
 static int TEST_DATA_MULTIPLE_CELLS[NUM_MULTIPLE_CELL_TESTS][8] = {
-  {0, 0, 1, 10, 10, 2, 0, 10},
-  {0, 15, 1, 10, 20, 2, 10, 30},
-  {0, 30, 1, 10, 10, 2, 50, 10},
+  {0, 0, 1, 100, 10, 2, 0, 10},
+  {0, 150, 1, 100, 20, 2, 100, 30},
+  {0, 300, 1, 100, 10, 2, 500, 10},
   {1, 0, 0, 0, 30, 2, 0, 30},
-  {1, 10, 0, 10, 10, 2, 0, 0},
-  {1, 14, 0, 0, 0, 2, 40, 0},
-  {2, 0, 0, 10, 10, 1, 0, 10},
-  {2, 30, 0, 10, 10, 1, 50, 30},
-  {2, 60, 0, 10, 30, 1, 0, 10},
+  {1, 100, 0, 100, 10, 2, 0, 0},
+  {1, 140, 0, 0, 0, 2, 400, 0},
+  {2, 0, 0, 100, 10, 1, 0, 10},
+  {2, 300, 0, 100, 10, 1, 500, 30},
+  {2, 600, 0, 100, 30, 1, 0, 10},
 };
 
 static void append_pss(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
@@ -183,7 +183,8 @@ static void test_mdct_on_samples(const char* filename)
   mdct.debug = true;
   mdct_detect_pss(&mdct, buffer, l, 1, &res);
   printf("MDCT: Detected N_id_2=%d, tau=%d\n", res.N_id_2, res.tau);
-//  correlation_detect_pss(&mdct, buffer, l, 1, &res);
+  correlation_detect_pss(&mdct, buffer, l, 1, &res);
+  printf("Correlation: Detected N_id_2=%d, tau=%d, peak=%lf\n", res.N_id_2, res.tau, res.peak_value);
   free(buffer);
 }
 
@@ -207,13 +208,13 @@ static int test_cells(bool perform) {
   if(!test_single_cell(0, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   };
-  if(test_single_cell(20000, DETECTION_METHOD_CORRELATION)) {
+  if(true == test_single_cell(20000, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
   if(!test_multiple_cells(0, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
-  if(test_multiple_cells(20000, DETECTION_METHOD_CORRELATION)) {
+  if(true == test_multiple_cells(20000, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
   return result;
@@ -225,11 +226,11 @@ int main() {
                           SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
+//  mdct.debug = true;
   result = test_cells(true);
-  mdct.debug = true;
-  printf("complex float size: %lu\n", sizeof(cf_t));
   if(false) {
-    test_mdct_on_samples("ssb_1726495284-NID2-1-offset-3600.dat");
+    mdct.debug = true;
+    test_mdct_on_samples("ssb_1726762194-NID2-1-offset-3600.dat");
   }
   srsran_destroy_pss_mdct(&mdct);
   return result;
