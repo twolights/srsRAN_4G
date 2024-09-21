@@ -8,6 +8,7 @@
 #include <complex.h>
 #include "srsran/phy/sync/pss_nr.h"
 
+#define SRSRAN_MDCT_PSS_FFT_SIZE 128
 #define SRSRAN_MDCT_RECOMMENDED_Q 1
 #define SRSRAN_MDCT_RECOMMENDED_PSI 6
 
@@ -17,6 +18,7 @@ typedef struct SRSRAN_API {
   cf_t* temp;
   cf_t* output;
   uint32_t symbol_sz;
+  uint32_t srate_hz;
   int32_t f_offset;
   uint32_t Q;
   uint32_t PSI;

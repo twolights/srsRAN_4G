@@ -180,9 +180,9 @@ static void test_mdct_on_samples(const char* filename)
   fclose(fp);
 
   srsran_pss_detect_res_t res;
-  mdct.debug = true;
+//  mdct.debug = true;
   mdct_detect_pss(&mdct, buffer, l, 1, &res);
-  printf("MDCT: Detected N_id_2=%d, tau=%d\n", res.N_id_2, res.tau);
+  printf("MDCT: Detected N_id_2=%d, tau=%d, peak=%lf\n", res.N_id_2, res.tau, res.peak_value);
   correlation_detect_pss(&mdct, buffer, l, 1, &res);
   printf("Correlation: Detected N_id_2=%d, tau=%d, peak=%lf\n", res.N_id_2, res.tau, res.peak_value);
   free(buffer);
@@ -224,14 +224,17 @@ int main() {
   int result = 0;
   srsran_prepare_pss_mdct(&mdct,
                           SYMBOL_SIZE, -30,
-                          SRSRAN_MDCT_RECOMMENDED_Q,
+                          SRSRAN_MDCT_RECOMMENDED_Q * 12,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
-//  mdct.debug = true;
   result = test_cells(true);
-  if(false) {
-    mdct.debug = true;
+  if(true) {
+//    mdct.debug = true;
     test_mdct_on_samples("ssb_1726762194-NID2-1-offset-3600.dat");
+//    test_mdct_on_samples("ssb_1726383854-NID2-1-offset-3600.dat");
+//    test_mdct_on_samples("ssb_1726554244-NID2-1-offset-6378.dat");
+//    test_mdct_on_samples("ssb_1726572642-NID2-1-offset-3600.dat");
   }
+  printf("sizeof(cf_t)=%lu\n", sizeof(cf_t));
   srsran_destroy_pss_mdct(&mdct);
   return result;
 }
