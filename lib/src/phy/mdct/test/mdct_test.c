@@ -63,7 +63,7 @@ static void prepare_mocked_received_samples(srsran_pss_mdct_t* mdct, cf_t* buffe
   } else {
     memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
   }
-  memcpy(buffer + tau, mdct->pss_x[N_id_2], mdct->symbol_sz * sizeof(cf_t));
+  append_pss(mdct, buffer, N_id_2, tau, 100);
 }
 
 static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offset_in_hz, int sampling_frequency_in_hz)
