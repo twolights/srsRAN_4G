@@ -5,13 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-// static cf_t time_domain_pss[SRSRAN_NOF_NID_2_NR][SRSRAN_MDCT_PSS_FFT_SIZE];
 static srsran_pss_mdct_t mdct;
 
 #define DETECTION_METHOD_CORRELATION 0
 #define DETECTION_METHOD_MDCT 1
 
-#define SAMPLING_FREQUENCY 30.72e6
+#define SAMPLING_FREQUENCY 23.04e6
 #define SYMBOL_SIZE 1536
 #define NOF_SAMPLES (SYMBOL_SIZE * 2)
 #define NUM_SINGLE_CELL_TESTS 9
@@ -19,6 +18,7 @@ static srsran_pss_mdct_t mdct;
 #define ADJACENT_CELL_TEST_START 2
 #define ADJACENT_CELL_TEST_SIZE 3
 #define NUM_ADJACENT_CELLS 2
+#define CFO_TO_TEST (15000 * 3)
 
 // Test data for single cell tests, each row contains {N_id_2, tau}
 static int TEST_DATA[NUM_SINGLE_CELL_TESTS][2] = {
@@ -171,7 +171,7 @@ static bool test_multiple_cells(int cfo, int method)
   return result;
 }
 
-static void test_mdct_on_samples(const char* filename)
+static void test_mdct_on_samples_file(const char* filename, int cfo)
 {
   size_t l = 29953;
   cf_t* buffer = (cf_t*)malloc(l * sizeof(cf_t));
@@ -179,12 +179,14 @@ static void test_mdct_on_samples(const char* filename)
   fread(buffer, sizeof(cf_t), l, fp);
   fclose(fp);
 
+  if(cfo != 0) {
+    apply_frequency_offset(buffer, l, cfo, SAMPLING_FREQUENCY);
+  }
   srsran_pss_detect_res_t res;
-//  mdct.debug = true;
   mdct_detect_pss(&mdct, buffer, l, 1, &res);
-  printf("MDCT: Detected N_id_2=%d, tau=%d, peak=%lf\n", res.N_id_2, res.tau, res.peak_value);
+  printf("MDCT[CFO=%d] Detected N_id_2=%d, tau=%d, peak=%lf\n", cfo, res.N_id_2, res.tau, res.peak_value);
   correlation_detect_pss(&mdct, buffer, l, 1, &res);
-  printf("Correlation: Detected N_id_2=%d, tau=%d, peak=%lf\n", res.N_id_2, res.tau, res.peak_value);
+  printf("Corr[CFO=%d]: Detected N_id_2=%d, tau=%d, peak=%lf\n", cfo, res.N_id_2, res.tau, res.peak_value);
   free(buffer);
 }
 
@@ -196,28 +198,39 @@ static int test_cells(bool perform) {
   if(!test_single_cell(0, DETECTION_METHOD_MDCT)) {
     result = -1;
   };
-  if(!test_single_cell(20000, DETECTION_METHOD_MDCT)) {
+  if(!test_single_cell(CFO_TO_TEST, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
   if(!test_multiple_cells(0, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
-  if(!test_multiple_cells(20000, DETECTION_METHOD_MDCT)) {
+  if(!test_multiple_cells(CFO_TO_TEST, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
   if(!test_single_cell(0, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   };
-  if(true == test_single_cell(20000, DETECTION_METHOD_CORRELATION)) {
+  if(true == test_single_cell(CFO_TO_TEST, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
   if(!test_multiple_cells(0, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
-  if(true == test_multiple_cells(20000, DETECTION_METHOD_CORRELATION)) {
+  if(true == test_multiple_cells(CFO_TO_TEST, DETECTION_METHOD_CORRELATION)) {
     result = -1;
   }
   return result;
+}
+
+static int test_mdct_on_samples(bool perform) {
+  if (!perform) {
+    return 0;
+  }
+  test_mdct_on_samples_file("ssb_1726762194-NID2-1-offset-3600.dat", 0);
+  test_mdct_on_samples_file("ssb_1726762194-NID2-1-offset-3600.dat", 15000 * 10);
+  test_mdct_on_samples_file("ssb_1727003781-NID2-1-offset-3608.dat", 0);
+  test_mdct_on_samples_file("ssb_1727003781-NID2-1-offset-3608.dat", 15000 * 10);
+  return 0;  // TODO
 }
 
 int main() {
@@ -226,15 +239,8 @@ int main() {
                           SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q * 12,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
-  result = test_cells(true);
-  if(true) {
-//    mdct.debug = true;
-    test_mdct_on_samples("ssb_1726762194-NID2-1-offset-3600.dat");
-//    test_mdct_on_samples("ssb_1726383854-NID2-1-offset-3600.dat");
-//    test_mdct_on_samples("ssb_1726554244-NID2-1-offset-6378.dat");
-//    test_mdct_on_samples("ssb_1726572642-NID2-1-offset-3600.dat");
-  }
-  printf("sizeof(cf_t)=%lu\n", sizeof(cf_t));
+  result = test_cells(true) == 0;
+  result = result == 0 && test_mdct_on_samples(true) == 0 ? 0 : -1;
   srsran_destroy_pss_mdct(&mdct);
   return result;
 }
