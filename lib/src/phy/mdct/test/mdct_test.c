@@ -95,9 +95,9 @@ static void detect_pss(const cf_t* in, uint32_t nof_samples,
                        int method)
 {
   if(method == DETECTION_METHOD_MDCT) {
-    mdct_detect_pss(&mdct, in, nof_samples, window_sz, result);
+    srsran_detect_pss_mdct(&mdct, in, nof_samples, window_sz, result);
   } else {
-    correlation_detect_pss(&mdct, in, nof_samples, window_sz, result);
+    srsran_detect_pss_correlation(&mdct, in, nof_samples, window_sz, result);
   }
 }
 
@@ -183,9 +183,9 @@ static void test_mdct_on_samples_file(const char* filename, int cfo)
     apply_frequency_offset(buffer, l, cfo, SAMPLING_FREQUENCY);
   }
   srsran_pss_detect_res_t res;
-  mdct_detect_pss(&mdct, buffer, l, 1, &res);
+  srsran_detect_pss_mdct(&mdct, buffer, l, 1, &res);
   printf("MDCT[CFO=%d] Detected N_id_2=%d, tau=%d, peak=%lf\n", cfo, res.N_id_2, res.tau, res.peak_value);
-  correlation_detect_pss(&mdct, buffer, l, 1, &res);
+  srsran_detect_pss_correlation(&mdct, buffer, l, 1, &res);
   printf("Corr[CFO=%d]: Detected N_id_2=%d, tau=%d, peak=%lf\n", cfo, res.N_id_2, res.tau, res.peak_value);
   free(buffer);
 }
