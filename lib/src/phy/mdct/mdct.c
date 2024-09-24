@@ -13,8 +13,8 @@
 static inline cf_t
 calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
 {
-  srsran_vec_prod_conj_ccc(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->output, mdct->symbol_sz);
-  cf_t result = srsran_vec_acc_cc(mdct->output, mdct->symbol_sz);
+  srsran_vec_prod_conj_ccc(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->symbol_sz);
+  cf_t result = srsran_vec_acc_cc(mdct->temp, mdct->symbol_sz);
 //  printf("d=%d (Q=%u, psi=%u), atan2f(%f, %f) = %f\n",
 //         d, Q, psi,
 //         crealf(result), cimagf(result),
@@ -74,20 +74,14 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
   mdct->f_offset = f_offset;
   mdct->Q = Q;
   mdct->PSI = PSI;
-  mdct->output = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
   mdct->debug = false;
-  if (mdct->output == NULL) {
-    return SRSRAN_ERROR;
-  }
   mdct->temp = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
   if (mdct->temp == NULL) {
-    free(mdct->output);
     return SRSRAN_ERROR;
   }
   mdct->y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
   if (mdct->y_tilde == NULL) {
     free(mdct->temp);
-    free(mdct->output);
     return SRSRAN_ERROR;
   }
   for (i = 0; i < mdct->PSI; i++) {
@@ -98,7 +92,6 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
         }
         free(mdct->y_tilde);
         free(mdct->temp);
-        free(mdct->output);
         return SRSRAN_ERROR;
       }
   }
@@ -111,7 +104,6 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
         free(mdct->x_tilde[j]);
       }
       free(mdct->temp);
-      free(mdct->output);
       return SRSRAN_ERROR;
     }
     for(j = 0; j < PSI; j++) {
@@ -138,8 +130,6 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   }
   free(mdct->temp);
   mdct->temp = NULL;
-  free(mdct->output);
-  mdct->output = NULL;
   for (i = 0; i < mdct->PSI; i++) {
     free(mdct->y_tilde[i]);
     mdct->y_tilde[i] = NULL;
