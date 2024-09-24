@@ -8,18 +8,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-// XXX copied from pss_nr.c, should be in a common header
-#define PSS_NR_SUBC_BEGIN 56
 
-static cf_t calculate_D(const cf_t* y, const cf_t* x_tilde, cf_t* temp, cf_t* output, uint32_t n, uint32_t Q, uint32_t psi)
+// TODO make this inline?
+// TODO make this return phase
+static cf_t
+calculate_D(const cf_t* y, const cf_t* x_tilde, cf_t* temp, cf_t* output, uint32_t n, uint32_t Q, uint32_t psi)
 {
   int32_t d = (int32_t)(1 + (Q * psi));
   differential_product(y, temp, d, n);
   srsran_vec_prod_conj_ccc(temp, x_tilde, output, n);
-  return srsran_vec_acc_cc(output, n);
+  cf_t result = srsran_vec_acc_cc(output, n);
+  printf("d=%d (Q=%u, psi=%u), atan2f(%f, %f) = %f\n",
+         d, Q, psi,
+         crealf(result), cimagf(result),
+         atan2f(cimagf(result), crealf(result))
+  );
+  return result;
 }
 
-static cf_t calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N_id_2, int32_t tau)
+// TODO make this inline?
+// TODO optimize this one, y_tilde only needs to be calculated once for each delay
+static cf_t
+calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N_id_2)
 {
   cf_t result = 0.0;
   for (int psi = 0; psi < mdct->PSI; psi++) {
@@ -151,7 +161,7 @@ SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
   for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
     for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
-      cf_t corr = calculate_C(mdct, in + tau, N_id_2, tau);
+      cf_t corr = calculate_C(mdct, in + tau, N_id_2);
       float corr_mag = cabsf(corr);
       if(mdct->debug) {
         printf("N_id_2=%d, tau=%d, corr_mag=%f\n", N_id_2, tau, corr_mag);
