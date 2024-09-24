@@ -15,6 +15,7 @@
 typedef struct SRSRAN_API {
   cf_t* pss_x[SRSRAN_NOF_NID_2_NR];
   cf_t** x_tilde[SRSRAN_NOF_NID_2_NR];
+  cf_t** y_tilde;
   cf_t* temp;
   cf_t* output;
   uint32_t symbol_sz;

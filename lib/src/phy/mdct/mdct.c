@@ -9,31 +9,26 @@
 #include <string.h>
 
 
-// TODO make this inline?
 // TODO make this return phase
-static cf_t
-calculate_D(const cf_t* y, const cf_t* x_tilde, cf_t* temp, cf_t* output, uint32_t n, uint32_t Q, uint32_t psi)
+static inline cf_t
+calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
 {
-  int32_t d = (int32_t)(1 + (Q * psi));
-  differential_product(y, temp, d, n);
-  srsran_vec_prod_conj_ccc(temp, x_tilde, output, n);
-  cf_t result = srsran_vec_acc_cc(output, n);
-  printf("d=%d (Q=%u, psi=%u), atan2f(%f, %f) = %f\n",
-         d, Q, psi,
-         crealf(result), cimagf(result),
-         atan2f(cimagf(result), crealf(result))
-  );
+  srsran_vec_prod_conj_ccc(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->output, mdct->symbol_sz);
+  cf_t result = srsran_vec_acc_cc(mdct->output, mdct->symbol_sz);
+//  printf("d=%d (Q=%u, psi=%u), atan2f(%f, %f) = %f\n",
+//         d, Q, psi,
+//         crealf(result), cimagf(result),
+//         atan2f(cimagf(result), crealf(result))
+//  );
   return result;
 }
 
-// TODO make this inline?
-// TODO optimize this one, y_tilde only needs to be calculated once for each delay
-static cf_t
+static inline cf_t
 calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N_id_2)
 {
   cf_t result = 0.0;
   for (int psi = 0; psi < mdct->PSI; psi++) {
-    result += calculate_D(y, mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->output, mdct->symbol_sz, mdct->Q, psi);
+    result += calculate_D(mdct, N_id_2, psi);
   }
   return result / (float)mdct->PSI;
 }
@@ -89,6 +84,25 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
     free(mdct->output);
     return SRSRAN_ERROR;
   }
+  mdct->y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
+  if (mdct->y_tilde == NULL) {
+    free(mdct->temp);
+    free(mdct->output);
+    return SRSRAN_ERROR;
+  }
+  for (i = 0; i < mdct->PSI; i++) {
+      mdct->y_tilde[i] = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
+      if (mdct->y_tilde[i] == NULL) {
+        for (j = 0; j < i; j++) {
+          free(mdct->y_tilde[j]);
+        }
+        free(mdct->y_tilde);
+        free(mdct->temp);
+        free(mdct->output);
+        return SRSRAN_ERROR;
+      }
+  }
+
   prepare_pss_x(mdct, f_offset);
   for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
     mdct->x_tilde[i] = (cf_t**)malloc(PSI * sizeof(cf_t*));
@@ -111,11 +125,12 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
 
 int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
 {
+  int i, j;
   if (mdct == NULL) {
     return SRSRAN_ERROR_INVALID_INPUTS;
   }
-  for (int i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
-    for (int j = 0; j < mdct->PSI; j++) {
+  for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
+    for (j = 0; j < mdct->PSI; j++) {
       free(mdct->x_tilde[i][j]);
     }
     free(mdct->x_tilde[i]);
@@ -125,13 +140,18 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   mdct->temp = NULL;
   free(mdct->output);
   mdct->output = NULL;
+  for (i = 0; i < mdct->PSI; i++) {
+    free(mdct->y_tilde[i]);
+    mdct->y_tilde[i] = NULL;
+  }
+  free(mdct->y_tilde);
   return SRSRAN_SUCCESS;
 }
 
 SRSRAN_API int srsran_detect_pss_correlation(const srsran_pss_mdct_t* mdct,
-                                      const cf_t* in, uint32_t nof_samples,
-                                      uint32_t window_sz,
-                                      srsran_pss_detect_res_t* result)
+                                             const cf_t* in, uint32_t nof_samples,
+                                             uint32_t window_sz,
+                                             srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
   for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
@@ -152,18 +172,31 @@ SRSRAN_API int srsran_detect_pss_correlation(const srsran_pss_mdct_t* mdct,
   return SRSRAN_SUCCESS;
 }
 
+static void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in, uint32_t tau)
+{
+  int32_t d;
+  for (int psi = 0; psi < mdct->PSI; psi++) {
+    d = (int32_t)(1 + (mdct->Q * psi));
+    differential_product(&in[tau], mdct->y_tilde[psi], d, mdct->symbol_sz);
+  }
+}
+
 SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
-                               const cf_t* in, uint32_t nof_samples,
-                               uint32_t window_sz,
-                               srsran_pss_detect_res_t* result)
+                                      const cf_t* in, uint32_t nof_samples,
+                                      uint32_t window_sz,
+                                      srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
+  cf_t** y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
+  memset(y_tilde, 0, mdct->PSI * sizeof(cf_t*));
+
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
-  for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
-    for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
+  for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
+    prepare_y_tilde(mdct, in, tau);
+    for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
       cf_t corr = calculate_C(mdct, in + tau, N_id_2);
       float corr_mag = cabsf(corr);
-      if(mdct->debug) {
+      if (mdct->debug) {
         printf("N_id_2=%d, tau=%d, corr_mag=%f\n", N_id_2, tau, corr_mag);
       }
       if (corr_mag > peak) {
@@ -174,5 +207,12 @@ SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
       }
     }
   }
+  for (int i = 0; i < mdct->PSI; i++) {
+    if(y_tilde[i] == NULL) {
+      continue;
+    }
+    free(y_tilde[i]);
+  }
+  free(y_tilde);
   return SRSRAN_SUCCESS;
 }
