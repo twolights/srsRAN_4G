@@ -2,6 +2,7 @@
 // Created by ykchen on 9/12/24.
 //
 #include "srsran/phy/mdct/mdct.h"
+#include "srsran/phy/utils/vector.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -68,9 +69,10 @@ static void prepare_mocked_received_samples(srsran_pss_mdct_t* mdct, cf_t* buffe
 
 static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offset_in_hz, int sampling_frequency_in_hz)
 {
-  for (int i = 0; i < nof_samples; i++) {
-    buffer[i] *= cexpf(I * 2 * M_PI * offset_in_hz * i / sampling_frequency_in_hz);
-  }
+//  for (int i = 0; i < nof_samples; i++) {
+//    buffer[i] *= cexpf(I * 2 * M_PI * offset_in_hz * i / sampling_frequency_in_hz);
+//  }
+  srsran_vec_apply_cfo(buffer, ((float)offset_in_hz / (float)sampling_frequency_in_hz), buffer, nof_samples);
 }
 
 static bool print_test_result(int N_id_2, int tau, srsran_pss_detect_res_t* res)
