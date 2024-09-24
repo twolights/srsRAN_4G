@@ -171,10 +171,11 @@ static void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in, uint3
   }
 }
 
-SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
-                                      const cf_t* in, uint32_t nof_samples,
-                                      uint32_t window_sz,
-                                      srsran_pss_detect_res_t* result)
+static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
+                                                uint32_t min_N_id_2, uint32_t max_N_id_2,
+                                                const cf_t* in, uint32_t nof_samples,
+                                                uint32_t window_sz,
+                                                srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
   cf_t** y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
@@ -183,7 +184,7 @@ SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
   for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
     prepare_y_tilde(mdct, in, tau);
-    for (uint32_t N_id_2 = 0; N_id_2 < SRSRAN_NOF_NID_2_NR; N_id_2++) {
+    for (uint32_t N_id_2 = min_N_id_2; N_id_2 <= max_N_id_2; N_id_2++) {
       cf_t corr = calculate_C(mdct, in + tau, N_id_2);
       float corr_mag = cabsf(corr);
       if (mdct->debug) {
@@ -205,4 +206,29 @@ SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
   }
   free(y_tilde);
   return SRSRAN_SUCCESS;
+}
+
+SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
+                                      const cf_t* in, uint32_t nof_samples,
+                                      uint32_t window_sz,
+                                      srsran_pss_detect_res_t* result)
+{
+  return mdct_detect_pss_with_nid2_set(mdct,
+                                       0, SRSRAN_NOF_NID_2_NR - 1,
+                                       in, nof_samples,
+                                       window_sz,
+                                       result);
+}
+
+SRSRAN_API int srsran_find_pss_mdct(const srsran_pss_mdct_t* mdct,
+                                    uint32_t N_id_2,
+                                    const cf_t* in, uint32_t nof_samples,
+                                    uint32_t window_sz,
+                                    srsran_pss_detect_res_t* result)
+{
+  return mdct_detect_pss_with_nid2_set(mdct,
+                                       N_id_2, N_id_2,
+                                       in, nof_samples,
+                                       window_sz,
+                                       result);
 }

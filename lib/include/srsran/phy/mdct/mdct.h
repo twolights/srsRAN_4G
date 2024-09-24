@@ -44,5 +44,10 @@ SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
                                       const cf_t* in, uint32_t nof_samples,
                                       uint32_t window_sz,
                                       srsran_pss_detect_res_t* result);
+SRSRAN_API int srsran_find_pss_mdct(const srsran_pss_mdct_t* mdct,
+                                    uint32_t N_id_2,
+                                    const cf_t* in, uint32_t nof_samples,
+                                    uint32_t window_sz,
+                                    srsran_pss_detect_res_t* result);
 
 #endif // SRSRAN_MDCT_H
