@@ -89,7 +89,7 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct, int32_t f_offset)
   srsran_dft_plan_free(&ifft_plan);
 }
 
-int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
+SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
                             uint32_t srate_hz, uint32_t symbol_sz, int32_t f_offset,
                             uint32_t Q, uint32_t PSI)
 {
@@ -140,7 +140,7 @@ int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
   return SRSRAN_SUCCESS;
 }
 
-int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
+SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
 {
   int i, j;
   if (mdct == NULL) {
@@ -160,6 +160,31 @@ int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
     mdct->y_tilde[i] = NULL;
   }
   free(mdct->y_tilde);
+  return SRSRAN_SUCCESS;
+}
+
+static int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
+                               const cf_t* in, uint32_t nof_samples,
+                               srsran_pss_detect_res_t* res)
+{
+  if (mdct == NULL || in == NULL || res == NULL || res->peak_value < 0 || res->tau < 0) {
+    return SRSRAN_ERROR_INVALID_INPUTS;
+  }
+  if (nof_samples < mdct->symbol_sz) {
+    return SRSRAN_ERROR_INVALID_INPUTS;
+  }
+  srsran_vec_prod_conj_ccc(&in[res->tau], mdct->pss_x[res->N_id_2], mdct->temp, mdct->symbol_sz);
+  float* phase = (float*)malloc(mdct->symbol_sz * sizeof(float));
+  float* target = (float*)malloc(mdct->symbol_sz * sizeof(float));
+  for(int i = 0; i < mdct->symbol_sz; i++) {
+    phase[i] = cargf(mdct->temp[i]);
+  }
+  unwrap_phase(phase, target, mdct->symbol_sz);
+  float phase_diff = phase[mdct->symbol_sz - 1] - phase[0];
+//  res->coarse_cfo = 75000;
+  res->coarse_cfo = (float)(phase_diff / (2 * M_PI * mdct->symbol_sz / mdct->srate_hz)); // * (float)mdct->symbol_sz;
+  free(phase);
+  free(target);
   return SRSRAN_SUCCESS;
 }
 
@@ -184,6 +209,7 @@ SRSRAN_API int srsran_detect_pss_correlation(const srsran_pss_mdct_t* mdct,
       }
     }
   }
+  estimate_coarse_cfo(mdct, in, nof_samples, result);
   return SRSRAN_SUCCESS;
 }
 
@@ -223,6 +249,7 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
       }
     }
   }
+  estimate_coarse_cfo(mdct, in, nof_samples, result);
   for (int i = 0; i < mdct->PSI; i++) {
     if(y_tilde[i] == NULL) {
       continue;

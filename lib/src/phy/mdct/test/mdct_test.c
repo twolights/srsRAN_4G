@@ -78,7 +78,7 @@ static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offse
 static bool print_test_result(int N_id_2, int tau, srsran_pss_detect_res_t* res)
 {
   if (res->tau == tau && res->N_id_2 == N_id_2) {
-    printf("passed for N_id_2=%d, tau=%d\n", N_id_2, tau);
+    printf("passed for N_id_2=%d, tau=%d, CFO=%f\n", N_id_2, tau, res->coarse_cfo);
     return true;
   }
   printf("failed:");
