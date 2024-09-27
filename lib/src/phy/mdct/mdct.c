@@ -90,10 +90,11 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct, int32_t f_offset)
 }
 
 int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
-                            uint32_t symbol_sz, int32_t f_offset,
+                            uint32_t srate_hz, uint32_t symbol_sz, int32_t f_offset,
                             uint32_t Q, uint32_t PSI)
 {
   int i, j;
+  mdct->srate_hz = srate_hz;
   mdct->symbol_sz = symbol_sz;
   mdct->f_offset = f_offset;
   mdct->Q = Q;

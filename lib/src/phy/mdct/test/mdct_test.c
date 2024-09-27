@@ -238,6 +238,7 @@ static int test_mdct_on_samples(bool perform) {
 int main() {
   int result = 0;
   srsran_prepare_pss_mdct(&mdct,
+                          SAMPLING_FREQUENCY,
                           SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q * 12,
                           SRSRAN_MDCT_RECOMMENDED_PSI);

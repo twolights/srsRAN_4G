@@ -409,7 +409,7 @@ static int ssb_setup_corr(srsran_ssb_t* q)
   // MDCT
   // TODO make Q & PSI configurable
   uint32_t Q = SRSRAN_MDCT_RECOMMENDED_Q * q->symbol_sz / SRSRAN_MDCT_PSS_FFT_SIZE;
-  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->symbol_sz, q->f_offset, Q, SRSRAN_MDCT_RECOMMENDED_PSI) < SRSRAN_SUCCESS) {
+  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->cfg.srate_hz, q->symbol_sz, q->f_offset, Q, SRSRAN_MDCT_RECOMMENDED_PSI) < SRSRAN_SUCCESS) {
     ERROR("Error preparing PSS MDCT");
     return SRSRAN_ERROR;
   }
