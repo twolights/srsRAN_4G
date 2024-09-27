@@ -876,23 +876,18 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
     return SRSRAN_ERROR;
   }
 
-  // Calculate correlation CFO coarse precision
-  double coarse_cfo_ref_hz = (q->cfg.srate_hz / q->corr_sz);
-
   srsran_pss_detect_res_t res;
 
-//  if (srsran_detect_pss_mdct(&q->mdct, in, nof_samples, q->symbol_sz, &res) < SRSRAN_SUCCESS) {
   if (srsran_detect_pss_mdct(&q->mdct, in, nof_samples, 4, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
   printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f\n", res.N_id_2, res.tau, res.peak_value);
-//  if (srsran_detect_pss_correlation(&q->mdct, in, nof_samples, q->symbol_sz, &res) < SRSRAN_SUCCESS) {
 //  if (srsran_detect_pss_correlation(&q->mdct, in, nof_samples, 1, &res) < SRSRAN_SUCCESS) {
 //    return SRSRAN_ERROR;
 //  }
   *found_N_id_2 = res.N_id_2;
   *found_delay  = res.tau;
-  *coarse_cfo_hz = coarse_cfo_ref_hz;  // TODO implement CFO estimation
+  *coarse_cfo_hz = res.coarse_cfo;
 //  printf("Time domain Corr: PSS detected: N_id_2=%d, delay=%d, peak=%f\n", *found_N_id_2, *found_delay, res.peak_value);
   return SRSRAN_SUCCESS;
 }
@@ -1346,19 +1341,12 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     N_id_2 = mdct_N_id_2;
     t_offset = mdct_t_offset;
     coarse_cfo_hz = mdct_coarse_cfo_hz;
-    printf("Self: N_id_2=%d, delay=%d, cfo=%f\n", mdct_N_id_2, mdct_t_offset, mdct_coarse_cfo_hz);
-//    if (ssb_pss_search(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
-//      ERROR("Error searching for N_id_2");
-//      return SRSRAN_ERROR;
-//    }
-//    printf("Conv: N_id_2=%d, delay=%d, cfo=%f\n", N_id_2, t_offset, coarse_cfo_hz);
   } else {
     if (ssb_pss_search(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
       return SRSRAN_ERROR;
     }
   }
-//  printf("Conv: PSS detected: N_id_2=%d, delay=%d, cfo=%f\n", N_id_2, t_offset, coarse_cfo_hz);
 
   // Remove CP offset prior demodulation
   if (t_offset >= q->cp_sz) {
