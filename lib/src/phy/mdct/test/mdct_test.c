@@ -186,9 +186,11 @@ static void test_mdct_on_samples_file(const char* filename, int cfo)
   }
   srsran_pss_detect_res_t res;
   srsran_detect_pss_mdct(&mdct, buffer, l, 1, &res);
-  printf("MDCT[CFO=%d] Detected N_id_2=%d, tau=%d, peak=%lf\n", cfo, res.N_id_2, res.tau, res.peak_value);
+  printf("MDCT[applied CFO=%d] Detected N_id_2=%d, tau=%d, peak=%lf, CFO=%f\n",
+         cfo, res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
   srsran_detect_pss_correlation(&mdct, buffer, l, 1, &res);
-  printf("Corr[CFO=%d]: Detected N_id_2=%d, tau=%d, peak=%lf\n", cfo, res.N_id_2, res.tau, res.peak_value);
+  printf("Corr[applied CFO=%d]: Detected N_id_2=%d, tau=%d, peak=%lf, CFO=%f\n",
+         cfo, res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
   free(buffer);
 }
 
@@ -199,7 +201,7 @@ static int test_cells(bool perform) {
   int result = 0;
   if(!test_single_cell(0, DETECTION_METHOD_MDCT)) {
     result = -1;
-  };
+  }
   if(!test_single_cell(CFO_TO_TEST, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
@@ -242,7 +244,7 @@ int main() {
                           SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q * 12,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
-  result = test_cells(true) == 0;
+  result = test_cells(true);
   result = result == 0 && test_mdct_on_samples(true) == 0 ? 0 : -1;
   srsran_destroy_pss_mdct(&mdct);
   return result;

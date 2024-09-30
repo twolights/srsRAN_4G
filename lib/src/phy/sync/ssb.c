@@ -1378,7 +1378,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   // Select N_id
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
 
-  printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d\n", N_id, N_id_1, N_id_2, t_offset);
+  printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
   time_t now = time(NULL);
   char filename[100];
   sprintf(filename, "ssb_%ld-NID2-%u-offset-%d.dat", now, N_id_2, t_offset);
