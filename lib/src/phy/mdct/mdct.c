@@ -172,6 +172,36 @@ SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   return SRSRAN_SUCCESS;
 }
 
+int estimate_coarse_cfo_with_mdct(const srsran_pss_mdct_t* mdct, srsran_pss_detect_res_t* res)
+{
+  if (mdct == NULL || res == NULL || res->peak_value < 0 || res->tau < 0) {
+    return SRSRAN_ERROR_INVALID_INPUTS;
+  }
+  int i, psi;
+  uint32_t d;
+  float theta_D, f_D;
+  float* unwrapped = &mdct->phase[mdct->PSI];
+  for (psi = 0; psi < mdct->PSI; psi++) {
+    srsran_vec_div_ccc(mdct->y_tilde[psi], mdct->x_tilde[res->N_id_2][psi], mdct->temp, mdct->symbol_sz);
+    theta_D = 0;
+    // Get average f_D over all the samples
+    for (i = 0; i < mdct->symbol_sz; i++) {
+      theta_D += cargf(mdct->temp[i]);
+    }
+    mdct->phase[psi] = theta_D / (float)mdct->symbol_sz;
+  }
+  unwrap_phase(mdct->phase, unwrapped, mdct->PSI);
+  for (psi = 0; psi < mdct->PSI; psi++) {
+    d = get_d(mdct, psi);
+    unwrapped[psi] /= (float)(-2 * M_PI * d);
+  }
+  // Average over all the symbols & psi's
+  f_D = srsran_vec_acc_ff(unwrapped, mdct->PSI) / (float)mdct->PSI;
+  f_D *= (float)mdct->srate_hz;
+  res->coarse_cfo = f_D;
+  return SRSRAN_SUCCESS;
+}
+
 int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
                         const cf_t* in, uint32_t nof_samples,
                         srsran_pss_detect_res_t* res)
@@ -236,8 +266,6 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
                                                 srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
-  cf_t** y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
-  memset(y_tilde, 0, mdct->PSI * sizeof(cf_t*));
 
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
   for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
@@ -256,14 +284,9 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
       }
     }
   }
-  estimate_coarse_cfo(mdct, in, nof_samples, result);
-  for (int i = 0; i < mdct->PSI; i++) {
-    if(y_tilde[i] == NULL) {
-      continue;
-    }
-    free(y_tilde[i]);
-  }
-  free(y_tilde);
+  prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
+//  estimate_coarse_cfo(mdct, in, nof_samples, result);
+  estimate_coarse_cfo_with_mdct(mdct, result);
   return SRSRAN_SUCCESS;
 }
 
