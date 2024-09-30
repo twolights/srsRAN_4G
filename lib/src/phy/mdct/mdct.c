@@ -33,6 +33,11 @@ void unwrap_phase(const float* phase, float* target, size_t length) {
   }
 }
 
+static inline int32_t get_d(const srsran_pss_mdct_t* mdct, uint32_t psi)
+{
+  return (int32_t)(1 + (mdct->Q * psi));
+}
+
 // TODO make this return phase
 static inline cf_t
 calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
@@ -61,7 +66,7 @@ calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N_id_2)
 //static void fill_x_tilde(cf_t* out, uint32_t symbol_sz, uint32_t n, int32_t d, uint32_t r)
 static void fill_x_tilde(srsran_pss_mdct_t* mdct, uint32_t r, uint32_t psi)
 {
-  uint32_t d = (uint32_t)(1 + (mdct->Q * psi));
+  int32_t d = get_d(mdct, psi);
   // TODO: Should be optimized by multiplying the constant phase instead of computing the diff. product for each N_id_2
   differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], (int)d, mdct->symbol_sz);
 }
@@ -163,9 +168,9 @@ SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   return SRSRAN_SUCCESS;
 }
 
-static int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
-                               const cf_t* in, uint32_t nof_samples,
-                               srsran_pss_detect_res_t* res)
+int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
+                        const cf_t* in, uint32_t nof_samples,
+                        srsran_pss_detect_res_t* res)
 {
   if (mdct == NULL || in == NULL || res == NULL || res->peak_value < 0 || res->tau < 0) {
     return SRSRAN_ERROR_INVALID_INPUTS;
@@ -217,7 +222,7 @@ static void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in, uint3
 {
   int32_t d;
   for (int psi = 0; psi < mdct->PSI; psi++) {
-    d = (int32_t)(1 + (mdct->Q * psi));
+    d = get_d(mdct, psi);
     differential_product(&in[tau], mdct->y_tilde[psi], d, mdct->symbol_sz);
   }
 }
