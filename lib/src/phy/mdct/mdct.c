@@ -12,25 +12,25 @@
 
 // TODO move this to a common place
 void unwrap_phase(const float* phase, float* target, size_t length) {
-    if (length < 2) {
-        return;
+  if (length < 2) {
+    return;
+  }
+
+  const float TWO_PI = 2.0f * M_PI;
+  float offset = 0.0f;
+
+  target[0] = phase[0];
+  for (size_t i = 1; i < length; i++) {
+    float delta = phase[i] - phase[i - 1];
+
+    if (delta > M_PI) {
+      offset -= TWO_PI;
+    } else if (delta < -M_PI) {
+      offset += TWO_PI;
     }
 
-    const float TWO_PI = 2.0f * M_PI;
-    float offset = 0.0f;
-
-    target[0] = phase[0];
-    for (size_t i = 1; i < length; i++) {
-        float delta = phase[i] - phase[i - 1];
-
-        if (delta > M_PI) {
-            offset -= TWO_PI;
-        } else if (delta < -M_PI) {
-            offset += TWO_PI;
-        }
-
-        target[i] = phase[i] + offset;
-    }
+    target[i] = phase[i] + offset;
+  }
 }
 
 // TODO make this return phase
