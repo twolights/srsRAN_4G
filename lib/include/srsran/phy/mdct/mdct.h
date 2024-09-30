@@ -17,6 +17,7 @@ typedef struct SRSRAN_API {
   cf_t** x_tilde[SRSRAN_NOF_NID_2_NR];
   cf_t** y_tilde;
   cf_t* temp;
+  float* phase;
   uint32_t symbol_sz;
   uint32_t srate_hz;
   int32_t f_offset;

@@ -109,9 +109,11 @@ SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
   if (mdct->temp == NULL) {
     return SRSRAN_ERROR;
   }
+  mdct->phase = (float*)malloc(symbol_sz * sizeof(float));
   mdct->y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
   if (mdct->y_tilde == NULL) {
     free(mdct->temp);
+    free(mdct->phase);
     return SRSRAN_ERROR;
   }
   for (i = 0; i < mdct->PSI; i++) {
@@ -122,6 +124,7 @@ SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
         }
         free(mdct->y_tilde);
         free(mdct->temp);
+        free(mdct->phase);
         return SRSRAN_ERROR;
       }
   }
@@ -134,6 +137,7 @@ SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
         free(mdct->x_tilde[j]);
       }
       free(mdct->temp);
+      free(mdct->phase);
       return SRSRAN_ERROR;
     }
     for(j = 0; j < PSI; j++) {
@@ -179,16 +183,14 @@ int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
     return SRSRAN_ERROR_INVALID_INPUTS;
   }
   srsran_vec_prod_conj_ccc(&in[res->tau], mdct->pss_x[res->N_id_2], mdct->temp, mdct->symbol_sz);
-  float* phase = (float*)malloc(mdct->symbol_sz * sizeof(float));
   float* target = (float*)malloc(mdct->symbol_sz * sizeof(float));
   for(int i = 0; i < mdct->symbol_sz; i++) {
-    phase[i] = cargf(mdct->temp[i]);
+    mdct->phase[i] = cargf(mdct->temp[i]);
   }
-  unwrap_phase(phase, target, mdct->symbol_sz);
-  float phase_diff = phase[mdct->symbol_sz - 1] - phase[0];
+  unwrap_phase(mdct->phase, target, mdct->symbol_sz);
+  float phase_diff = mdct->phase[mdct->symbol_sz - 1] - mdct->phase[0];
 //  res->coarse_cfo = 75000;
-  res->coarse_cfo = (float)(phase_diff / (2 * M_PI * mdct->symbol_sz / mdct->srate_hz)); // * (float)mdct->symbol_sz;
-  free(phase);
+  res->coarse_cfo = (float)(phase_diff / (2 * M_PI * mdct->symbol_sz / mdct->srate_hz)) * (float)mdct->symbol_sz;
   free(target);
   return SRSRAN_SUCCESS;
 }
