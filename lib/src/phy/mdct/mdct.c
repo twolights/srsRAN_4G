@@ -12,7 +12,7 @@
 
 // TODO move this to a common place
 void unwrap_phase(const float* phase, float* target, size_t length) {
-  if (length < 2) {
+  if (phase == NULL || target == NULL || length < 2) {
     return;
   }
 
