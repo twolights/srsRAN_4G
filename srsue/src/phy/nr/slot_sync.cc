@@ -87,6 +87,13 @@ int slot_sync::set_sync_cfg(const srsran_ue_sync_nr_cfg_t& cfg)
   return SRSRAN_SUCCESS;
 }
 
+int slot_sync::set_cfo(const float cfo)
+{
+  logger.info("SYNC: set previous detected CFO=%f", cfo);
+  ue_sync_nr.cfo_hz = cfo;
+  return SRSRAN_SUCCESS;
+}
+
 int slot_sync::recv_callback(srsran::rf_buffer_t& data, srsran_timestamp_t* rx_time)
 {
   // This function is designed for being called from the UE sync object which will pass a null rx_time in case

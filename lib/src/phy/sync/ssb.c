@@ -1445,7 +1445,8 @@ static int ssb_pss_find_with_mdct(srsran_ssb_t* q,
     return SRSRAN_ERROR;
   }
   *found_delay = res.tau;
-  printf("MDCT(find): PSS detected: N_id_2=%d, delay=%d, peak=%f\n", res.N_id_2, res.tau, res.peak_value);
+  printf("MDCT(find): PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%fHz\n",
+         res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
   return SRSRAN_SUCCESS;
 }
 
@@ -1569,7 +1570,7 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
 
   // Demodulate
   cf_t ssb_grid[SRSRAN_SSB_NOF_RE] = {};
-  if (ssb_demodulate(q, q->sf_buffer, t_offset, 0.0f, ssb_grid) < SRSRAN_SUCCESS) {
+  if (ssb_demodulate(q, q->sf_buffer, t_offset, 0, ssb_grid) < SRSRAN_SUCCESS) {
     ERROR("Error demodulating");
     return SRSRAN_ERROR;
   }

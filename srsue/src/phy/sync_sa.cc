@@ -272,6 +272,7 @@ void sync_sa::run_state_cell_search()
 void sync_sa::run_state_sfn_sync()
 {
   // Run SFN synchronization
+  slot_synchronizer.set_cfo(cs_ret.ssb_res.measurements.cfo_hz);
   if (slot_synchronizer.run_sfn_sync()) {
     tti = slot_synchronizer.get_slot_cfg().idx;
 
