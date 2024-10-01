@@ -50,6 +50,7 @@ public:
 
   int set_sync_cfg(const srsran_ue_sync_nr_cfg_t& cfg);
 
+  int set_cfo(const float cfo);
   int  recv_callback(srsran::rf_buffer_t& rf_buffer, srsran_timestamp_t* timestamp);
   bool run_sfn_sync();
   bool run_camping(srsran::rf_buffer_t& buffer, srsran::rf_timestamp_t& timestamp);
