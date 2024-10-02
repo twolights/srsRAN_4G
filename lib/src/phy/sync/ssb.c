@@ -1331,16 +1331,10 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   uint32_t t_offset      = 0;
   float    coarse_cfo_hz = 0.0f;
   if (use_mdct) {
-    uint32_t mdct_N_id_2= 0;
-    uint32_t mdct_t_offset      = 0;
-    float    mdct_coarse_cfo_hz = 0.0f;
-    if (ssb_pss_search_with_mdct(q, in, nof_samples, &mdct_N_id_2, &mdct_t_offset, &mdct_coarse_cfo_hz) < SRSRAN_SUCCESS) {
+    if (ssb_pss_search_with_mdct(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
       return SRSRAN_ERROR;
     }
-    N_id_2 = mdct_N_id_2;
-    t_offset = mdct_t_offset;
-    coarse_cfo_hz = mdct_coarse_cfo_hz;
   } else {
     if (ssb_pss_search(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
