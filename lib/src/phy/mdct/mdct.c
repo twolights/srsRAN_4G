@@ -225,6 +225,24 @@ int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
   return SRSRAN_SUCCESS;
 }
 
+int estimate_cfo_by_half_pss(const srsran_pss_mdct_t* mdct,
+                             const cf_t* in, uint32_t nof_samples,
+                             srsran_pss_detect_res_t* res)
+{
+  if (mdct == NULL || in == NULL || res == NULL || res->peak_value < 0 || res->tau < 0) {
+    return SRSRAN_ERROR_INVALID_INPUTS;
+  }
+  if (nof_samples < mdct->symbol_sz) {
+    return SRSRAN_ERROR_INVALID_INPUTS;
+  }
+  cf_t c1 = srsran_vec_dot_prod_ccc(&in[res->tau], mdct->pss_x[res->N_id_2], mdct->symbol_sz / 2);
+  cf_t c2 = srsran_vec_dot_prod_ccc(&in[res->tau + mdct->symbol_sz / 2],
+                                    &mdct->pss_x[res->N_id_2][mdct->symbol_sz / 2],
+                                    mdct->symbol_sz / 2);
+  res->coarse_cfo = cargf(conjf(c1) * c2) / M_PI;
+  return SRSRAN_SUCCESS;
+}
+
 SRSRAN_API int srsran_detect_pss_correlation(const srsran_pss_mdct_t* mdct,
                                              const cf_t* in, uint32_t nof_samples,
                                              uint32_t window_sz,
@@ -286,6 +304,7 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
   }
   prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
 //  estimate_coarse_cfo(mdct, in, nof_samples, result);
+//  estimate_cfo_by_half_pss(mdct, in, nof_samples, result);
   estimate_coarse_cfo_with_mdct(mdct, result);
   return SRSRAN_SUCCESS;
 }
