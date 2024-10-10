@@ -185,10 +185,12 @@ int estimate_coarse_cfo_with_mdct(const srsran_pss_mdct_t* mdct, srsran_pss_dete
     srsran_vec_div_ccc(mdct->y_tilde[psi], mdct->x_tilde[res->N_id_2][psi], mdct->temp, mdct->symbol_sz);
     theta_D = 0;
     // Get average f_D over all the samples
-    for (i = 0; i < mdct->symbol_sz; i++) {
+//    for (i = 0; i < mdct->symbol_sz; i++) {
+    for (i = 0; i < 20; i++) {  // TODO: WTF?
       theta_D += cargf(mdct->temp[i]);
     }
-    mdct->phase[psi] = theta_D / (float)mdct->symbol_sz;
+    mdct->phase[psi] = theta_D / 20;  // TODO: WTF?
+//    mdct->phase[psi] = theta_D / (float)mdct->symbol_sz;
   }
   unwrap_phase(mdct->phase, unwrapped, mdct->PSI);
   for (psi = 0; psi < mdct->PSI; psi++) {
@@ -214,7 +216,7 @@ int estimate_coarse_cfo(const srsran_pss_mdct_t* mdct,
   }
   srsran_vec_prod_conj_ccc(&in[res->tau], mdct->pss_x[res->N_id_2], mdct->temp, mdct->symbol_sz);
   float* target = (float*)malloc(mdct->symbol_sz * sizeof(float));
-  for(int i = 0; i < mdct->symbol_sz; i++) {
+  for (int i = 0; i < mdct->symbol_sz; i++) {
     mdct->phase[i] = cargf(mdct->temp[i]);
   }
   unwrap_phase(mdct->phase, target, mdct->symbol_sz);
