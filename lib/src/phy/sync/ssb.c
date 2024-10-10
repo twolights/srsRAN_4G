@@ -1540,7 +1540,7 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
 
   // Search for PSS in time domain
   uint32_t t_offset = 0;
-  if (use_mdct) {
+  if (false && use_mdct) {
     if (ssb_pss_find_with_mdct(q, q->sf_buffer, q->sf_sz + q->ssb_sz, SRSRAN_NID_2_NR(N_id), &t_offset) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
       return SRSRAN_ERROR;
