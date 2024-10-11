@@ -33,9 +33,9 @@ void unwrap_phase(const float* phase, float* target, size_t length) {
   }
 }
 
-static inline int32_t get_d(const srsran_pss_mdct_t* mdct, uint32_t psi)
+static inline uint32_t get_d(const srsran_pss_mdct_t* mdct, uint32_t psi)
 {
-  return (int32_t)(1 + (mdct->Q * psi));
+  return (1 + (mdct->Q * psi));
 }
 
 static inline cf_t
@@ -194,7 +194,7 @@ int estimate_coarse_cfo_with_mdct(const srsran_pss_mdct_t* mdct, srsran_pss_dete
   unwrap_phase(mdct->phase, unwrapped, mdct->PSI);
   for (psi = 0; psi < mdct->PSI; psi++) {
     d = get_d(mdct, psi);
-    unwrapped[psi] /= (float)(-2 * M_PI * d);
+    unwrapped[psi] /= (float)(2 * M_PI * d);
   }
   // Average over all the symbols & psi's
   f_D = srsran_vec_acc_ff(unwrapped, mdct->PSI) / (float)mdct->PSI;
@@ -269,9 +269,9 @@ SRSRAN_API int srsran_detect_pss_correlation(const srsran_pss_mdct_t* mdct,
   return SRSRAN_SUCCESS;
 }
 
-static void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in, uint32_t tau)
+static inline void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in, uint32_t tau)
 {
-  int32_t d;
+  uint32_t d;
   for (int psi = 0; psi < mdct->PSI; psi++) {
     d = get_d(mdct, psi);
     differential_product(&in[tau], mdct->y_tilde[psi], d, mdct->symbol_sz);
@@ -292,9 +292,11 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
     for (uint32_t N_id_2 = min_N_id_2; N_id_2 <= max_N_id_2; N_id_2++) {
       cf_t corr = calculate_C(mdct, N_id_2);
       float corr_mag = cabsf(corr);
+#if 0
       if (mdct->debug) {
         printf("N_id_2=%d, tau=%d, corr_mag=%f\n", N_id_2, tau, corr_mag);
       }
+#endif
       if (corr_mag > peak) {
         peak = corr_mag;
         result->tau = tau;
