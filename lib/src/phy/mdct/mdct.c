@@ -38,7 +38,6 @@ static inline int32_t get_d(const srsran_pss_mdct_t* mdct, uint32_t psi)
   return (int32_t)(1 + (mdct->Q * psi));
 }
 
-// TODO make this return phase
 static inline cf_t
 calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
 {
@@ -53,7 +52,7 @@ calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
 }
 
 static inline cf_t
-calculate_C(const srsran_pss_mdct_t* mdct, const cf_t* y, uint32_t N_id_2)
+calculate_C(const srsran_pss_mdct_t* mdct, uint32_t N_id_2)
 {
   cf_t result = 0.0;
   for (int psi = 0; psi < mdct->PSI; psi++) {
@@ -291,7 +290,7 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
   for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
     prepare_y_tilde(mdct, in, tau);
     for (uint32_t N_id_2 = min_N_id_2; N_id_2 <= max_N_id_2; N_id_2++) {
-      cf_t corr = calculate_C(mdct, in + tau, N_id_2);
+      cf_t corr = calculate_C(mdct, N_id_2);
       float corr_mag = cabsf(corr);
       if (mdct->debug) {
         printf("N_id_2=%d, tau=%d, corr_mag=%f\n", N_id_2, tau, corr_mag);
