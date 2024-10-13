@@ -9,35 +9,37 @@
 #include <stdio.h>
 #include <string.h>
 
-#define N 10
+#define N 80
 #define FFT_SIZE SRSRAN_PSS_NR_LEN
 #define PSS_NR_SUBC_BEGIN 56
 
-bool test_on_sequence()
+void ssb_vec_prod_conj_circ_shift(const cf_t* a, const cf_t* b, cf_t* c, uint32_t n, int shift);
+
+static bool test_on_sequence()
 {
   cf_t a[N] = {
-      1.0 + 1.0*I,
-      2.0 + 2.0*I,
-      3.0 + 3.0*I,
-      4.0 + 4.0*I,
-      5.0 + 5.0*I,
-      6.0 + 6.0*I,
-      7.0 + 7.0*I,
-      8.0 + 8.0*I,
-      9.0 + 9.0*I,
-      10.0 + 10.0*I
+      1.0 + 1.0*I, 1.0 + 1.0*I, 1.0 + 1.0*I, 1.0 + 1.0*I, 1.0 + 1.0*I, 1.0 + 1.0*I, 1.0 + 1.0*I, 1.0 + 1.0*I,
+      2.0 + 2.0*I, 2.0 + 2.0*I, 2.0 + 2.0*I, 2.0 + 2.0*I, 2.0 + 2.0*I, 2.0 + 2.0*I, 2.0 + 2.0*I, 2.0 + 2.0*I,
+      3.0 + 3.0*I, 3.0 + 3.0*I, 3.0 + 3.0*I, 3.0 + 3.0*I, 3.0 + 3.0*I, 3.0 + 3.0*I, 3.0 + 3.0*I, 3.0 + 3.0*I,
+      4.0 + 4.0*I, 4.0 + 4.0*I, 4.0 + 4.0*I, 4.0 + 4.0*I, 4.0 + 4.0*I, 4.0 + 4.0*I, 4.0 + 4.0*I, 4.0 + 4.0*I,
+      5.0 + 5.0*I, 5.0 + 5.0*I, 5.0 + 5.0*I, 5.0 + 5.0*I, 5.0 + 5.0*I, 5.0 + 5.0*I, 5.0 + 5.0*I, 5.0 + 5.0*I,
+      6.0 + 6.0*I, 6.0 + 6.0*I, 6.0 + 6.0*I, 6.0 + 6.0*I, 6.0 + 6.0*I, 6.0 + 6.0*I, 6.0 + 6.0*I, 6.0 + 6.0*I,
+      7.0 + 7.0*I, 7.0 + 7.0*I, 7.0 + 7.0*I, 7.0 + 7.0*I, 7.0 + 7.0*I, 7.0 + 7.0*I, 7.0 + 7.0*I, 7.0 + 7.0*I,
+      8.0 + 8.0*I, 8.0 + 8.0*I, 8.0 + 8.0*I, 8.0 + 8.0*I, 8.0 + 8.0*I, 8.0 + 8.0*I, 8.0 + 8.0*I, 8.0 + 8.0*I,
+      9.0 + 9.0*I, 9.0 + 9.0*I, 9.0 + 9.0*I, 9.0 + 9.0*I, 9.0 + 9.0*I, 9.0 + 9.0*I, 9.0 + 9.0*I, 9.0 + 9.0*I,
+      10.0 + 10.0*I, 10.0 + 10.0*I, 10.0 + 10.0*I, 10.0 + 10.0*I, 10.0 + 10.0*I, 10.0 + 10.0*I, 10.0 + 10.0*I, 10.0 + 10.0*I,
     };
   cf_t c[N];
   int32_t d = 1;
   differential_product(a, c, d, N);
-  if(creal(c[0]) != 4 || cimag(c[0]) != 0 || creal(c[9]) != 20 || cimag(c[9]) != 0) {
+  if(creal(c[0]) != 2 || cimag(c[0]) != 0 || creal(c[9]) != 8 || cimag(c[9]) != 0) {
     printf("Test on sequence failed\n");
     return false;
   }
   return true;
 }
 
-float calculate_correlation_value(cf_t* c, uint32_t n)
+static float calculate_correlation_value(cf_t* c, uint32_t n)
 {
   float l = 0;
   for (int i = 0; i < n; i++) {
@@ -46,7 +48,7 @@ float calculate_correlation_value(cf_t* c, uint32_t n)
   return l;
 }
 
-void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
+static void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
 {
   uint32_t N_id_2;
   cf_t ssb_grid[SRSRAN_SSB_NOF_RE];
@@ -59,7 +61,7 @@ void prepare_all_pss_nr(cf_t all_pss[SRSRAN_NOF_NID_2_NR][FFT_SIZE])
   }
 }
 
-bool test_on_pss_nr()
+static bool test_on_pss_nr()
 {
   int i, j;
   cf_t corr_output[FFT_SIZE];
@@ -85,7 +87,7 @@ bool test_on_pss_nr()
   // Test auto-correlation
   for (i = 0; i < SRSRAN_NOF_NID_2_NR; i++) {
     for (j = -5; j <= 5; j++) {
-      srsran_vec_prod_conj_cyclic_ccc(all_pss_diff_prod[i], all_pss_diff_prod[i], corr_output, j, FFT_SIZE);
+      ssb_vec_prod_conj_circ_shift(all_pss_diff_prod[i], all_pss_diff_prod[i], corr_output, FFT_SIZE, j);
       magnitude = calculate_correlation_value(corr_output, FFT_SIZE);
       printf("PSS(NID2=%d) with time shift = %d, value=%.5f\n", i, j, magnitude);
     }
