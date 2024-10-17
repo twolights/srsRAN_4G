@@ -67,10 +67,14 @@ static const float unwrapped_phase[NUMBER_OF_SAMPLES] = {
 };
 
 int main() {
-    float target[NUMBER_OF_SAMPLES];
-    unwrap_phase(wrapped_phase, target, NUMBER_OF_SAMPLES);
-    for (int i = 0; i < NUMBER_OF_SAMPLES; i++) {
-      assert(fabsf(target[i] - unwrapped_phase[i]) < 1e-5);
+  int result = 0;
+  float target[NUMBER_OF_SAMPLES];
+  unwrap_phase(wrapped_phase, target, NUMBER_OF_SAMPLES);
+  for (int i = 0; i < NUMBER_OF_SAMPLES; i++) {
+    if(fabsf(target[i] - unwrapped_phase[i]) > 1e-5) {
+        printf("target[%d] = %f, unwrapped_phase[%d] = %f\n", i, target[i], i, unwrapped_phase[i]);
+        result = 1;
     }
-    return 0;
+  }
+  return result;
 }
