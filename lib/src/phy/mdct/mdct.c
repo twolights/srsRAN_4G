@@ -177,19 +177,20 @@ int estimate_coarse_cfo_with_mdct(const srsran_pss_mdct_t* mdct, srsran_pss_dete
     return SRSRAN_ERROR_INVALID_INPUTS;
   }
   int i, psi;
+  uint32_t nof_samples_to_process;
   uint32_t d;
   float theta_D, f_D;
   float* unwrapped = &mdct->phase[mdct->PSI];
   for (psi = 0; psi < mdct->PSI; psi++) {
     srsran_vec_div_ccc(mdct->y_tilde[psi], mdct->x_tilde[res->N_id_2][psi], mdct->temp, mdct->symbol_sz);
+    d = get_d(mdct, psi);
     theta_D = 0;
-    // Get average f_D over all the samples
-//    for (i = 0; i < mdct->symbol_sz; i++) {
-    for (i = 0; i < 20; i++) {  // TODO: WTF?
+    nof_samples_to_process = mdct->symbol_sz - d;
+    // Get average f_D over all but the tail d the samples
+    for (i = 0; i < nof_samples_to_process; i++) {
       theta_D += cargf(mdct->temp[i]);
     }
-    mdct->phase[psi] = theta_D / 20;  // TODO: WTF?
-//    mdct->phase[psi] = theta_D / (float)mdct->symbol_sz;
+    mdct->phase[psi] = theta_D / (float)nof_samples_to_process;
   }
   unwrap_phase(mdct->phase, unwrapped, mdct->PSI);
   for (psi = 0; psi < mdct->PSI; psi++) {
