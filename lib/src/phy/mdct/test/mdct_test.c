@@ -198,18 +198,24 @@ static int test_cells(bool perform) {
   if(!perform) {
     return 0;
   }
-  int result = 0;
+  int result = 0, i;
+  static int CFOS_TO_TEST[] = {0, 4500, 12000, 15000, 30000, -15000, -30000, -2000};
+  int num_cfos = sizeof(CFOS_TO_TEST) / sizeof(int);
   if(!test_single_cell(0, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
-  if(!test_single_cell(CFO_TO_TEST, DETECTION_METHOD_MDCT)) {
-    result = -1;
+  for (i = 0; i < num_cfos; i++) {
+    if (!test_single_cell(CFOS_TO_TEST[i], DETECTION_METHOD_MDCT)) {
+      result = -1;
+    }
   }
   if(!test_multiple_cells(0, DETECTION_METHOD_MDCT)) {
     result = -1;
   }
-  if(!test_multiple_cells(CFO_TO_TEST, DETECTION_METHOD_MDCT)) {
-    result = -1;
+  for (i = 0; i < num_cfos; i++) {
+    if (!test_multiple_cells(CFOS_TO_TEST[i], DETECTION_METHOD_MDCT)) {
+      result = -1;
+    }
   }
   if(!test_single_cell(0, DETECTION_METHOD_CORRELATION)) {
     result = -1;
@@ -230,10 +236,8 @@ static int test_mdct_on_samples(bool perform) {
   if (!perform) {
     return 0;
   }
-  test_mdct_on_samples_file("ssb_1726762194-NID2-1-offset-3600.dat", 0);
-  test_mdct_on_samples_file("ssb_1726762194-NID2-1-offset-3600.dat", 15000 * 10);
-  test_mdct_on_samples_file("ssb_1727003781-NID2-1-offset-3608.dat", 0);
-  test_mdct_on_samples_file("ssb_1727003781-NID2-1-offset-3608.dat", 15000 * 10);
+  test_mdct_on_samples_file("ssb_1728829201-NID2-1-offset-3828.dat", 0);
+  test_mdct_on_samples_file("ssb_1728829201-NID2-1-offset-3828.dat", 15000 * 10);
   return 0;  // TODO
 }
 
