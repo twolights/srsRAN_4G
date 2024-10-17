@@ -48,6 +48,7 @@
  */
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
+//static bool use_mdct = false;
 static bool use_mdct = true;
 
 static int ssb_init_corr(srsran_ssb_t* q)
@@ -881,7 +882,7 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
   if (srsran_detect_pss_mdct(&q->mdct, in, nof_samples, 4, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
-  printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f\n", res.N_id_2, res.tau, res.peak_value);
+  printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%f\n", res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
 //  if (srsran_detect_pss_correlation(&q->mdct, in, nof_samples, 1, &res) < SRSRAN_SUCCESS) {
 //    return SRSRAN_ERROR;
 //  }
@@ -1373,12 +1374,12 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
 
   printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
-  time_t now = time(NULL);
-  char filename[100];
-  sprintf(filename, "ssb_%ld-NID2-%u-offset-%d.dat", now, N_id_2, t_offset);
-  FILE* f = fopen(filename, "wb");
-  fwrite(in, sizeof(cf_t), nof_samples, f);
-  fclose(f);
+//  time_t now = time(NULL);
+//  char filename[100];
+//  sprintf(filename, "ssb_%ld-NID2-%u-offset-%d.dat", now, N_id_2, t_offset);
+//  FILE* f = fopen(filename, "wb");
+//  fwrite(in, sizeof(cf_t), nof_samples, f);
+//  fclose(f);
 
   // Select the most suitable SSB candidate
   uint32_t                n_hf      = 0;
@@ -1419,6 +1420,8 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   res->pbch_msg     = pbch_msg;
   res->measurements = measurements;
   res->measurements.cfo_hz += coarse_cfo_hz;
+
+  printf("SSB detected: measured CFO=%f\n", res->measurements.cfo_hz);
 
   return SRSRAN_SUCCESS;
 }
