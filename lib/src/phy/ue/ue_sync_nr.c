@@ -153,7 +153,8 @@ static int ue_sync_nr_update_ssb(srsran_ue_sync_nr_t*                 q,
   q->sfn     = mib.sfn;
 
   // Transition to track only if the measured delay is below 2.4 microseconds
-  if (measurements->delay_us < 2.4f) {
+//  if (measurements->delay_us < 2.4f) {
+  if (measurements->delay_us < 300.0f) {
     q->state = SRSRAN_UE_SYNC_NR_STATE_TRACK;
   }
 
@@ -320,6 +321,7 @@ int srsran_ue_sync_nr_zerocopy(srsran_ue_sync_nr_t* q, cf_t** buffer, srsran_ue_
   outcome->cfo_hz   = q->cfo_hz;
   outcome->delay_us = q->avg_delay_us;
 
+  printf("outcome->in_sync=%d\n", outcome->in_sync);
   return SRSRAN_SUCCESS;
 }
 

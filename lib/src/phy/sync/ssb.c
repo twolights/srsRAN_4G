@@ -882,7 +882,7 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
   if (srsran_detect_pss_mdct(&q->mdct, in, nof_samples, 4, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
-  printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%f\n", res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
+//  printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%f\n", res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
 //  if (srsran_detect_pss_correlation(&q->mdct, in, nof_samples, 1, &res) < SRSRAN_SUCCESS) {
 //    return SRSRAN_ERROR;
 //  }
@@ -1430,20 +1430,18 @@ static int ssb_pss_find_with_mdct(srsran_ssb_t* q,
                                   const cf_t* in,
                                   uint32_t nof_samples,
                                   uint32_t N_id_2,
-                                  uint32_t* found_delay)
+                                  srsran_pss_detect_res_t* res)
 {
   // verify it is initialised
   if (q->corr_sz == 0) {
     return SRSRAN_ERROR;
   }
 
-  srsran_pss_detect_res_t res;
-  if (srsran_find_pss_mdct(&q->mdct, N_id_2, in, nof_samples, 4, &res) < SRSRAN_SUCCESS) {
+  if (srsran_find_pss_mdct(&q->mdct, N_id_2, in, nof_samples, 4, res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
-  *found_delay = res.tau;
-  printf("MDCT(find): PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%fHz\n",
-         res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
+//  printf("MDCT(find): PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%fHz\n",
+//         res->N_id_2, res->tau, res->peak_value, res->coarse_cfo);
   return SRSRAN_SUCCESS;
 }
 
@@ -1513,6 +1511,8 @@ static int ssb_pss_find(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, u
   // Save findings
   *found_delay = best_delay;
 
+  printf("PSS(find): PSS detected: N_id_2=%d, delay=%d, peak=%f\n",
+         N_id_2, best_delay, best_corr);
   return SRSRAN_SUCCESS;
 }
 
@@ -1543,12 +1543,17 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
 
   // Search for PSS in time domain
   uint32_t t_offset = 0;
+  float cfo_hz = 0.0f;
+  uint32_t N_id_2 = SRSRAN_NID_2_NR(N_id);
   if (use_mdct) {
-    if (ssb_pss_find_with_mdct(q, q->sf_buffer, q->sf_sz + q->ssb_sz, SRSRAN_NID_2_NR(N_id), &t_offset) < SRSRAN_SUCCESS) {
+    srsran_pss_detect_res_t res = {};
+    if (ssb_pss_find_with_mdct(q, q->sf_buffer, q->sf_sz + q->ssb_sz, N_id_2, &res) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
       return SRSRAN_ERROR;
     }
-  } else if (ssb_pss_find(q, q->sf_buffer, q->sf_sz + q->ssb_sz, SRSRAN_NID_2_NR(N_id), &t_offset) < SRSRAN_SUCCESS) {
+    t_offset = res.tau;
+    cfo_hz = res.coarse_cfo;
+  } else if (ssb_pss_find(q, q->sf_buffer, q->sf_sz + q->ssb_sz, N_id_2, &t_offset) < SRSRAN_SUCCESS) {
     ERROR("Error searching for N_id_2");
     return SRSRAN_ERROR;
   }
@@ -1567,7 +1572,7 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
 
   // Demodulate
   cf_t ssb_grid[SRSRAN_SSB_NOF_RE] = {};
-  if (ssb_demodulate(q, q->sf_buffer, t_offset, 0, ssb_grid) < SRSRAN_SUCCESS) {
+  if (ssb_demodulate(q, q->sf_buffer, t_offset, cfo_hz, ssb_grid) < SRSRAN_SUCCESS) {
     ERROR("Error demodulating");
     return SRSRAN_ERROR;
   }
@@ -1603,9 +1608,11 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
 
   // SSB delay in SF
   float ssb_delay_us = (float)(1e6 * (((double)t_offset - (double)q->ssb_sz - (double)ssb_offset) / q->cfg.srate_hz));
+  printf("cfo_hz=%lf, ssb_delay_us=%f, pbch CRC=%d\n", cfo_hz, ssb_delay_us, pbch_msg->crc);
 
   // Add delay to measure
   meas->delay_us += ssb_delay_us;
+  meas->cfo_hz += cfo_hz;
 
   return SRSRAN_SUCCESS;
 }
@@ -1650,6 +1657,7 @@ int srsran_ssb_track(srsran_ssb_t*                  q,
     return SRSRAN_ERROR;
   }
 
+  printf("ssb_track: CRC=%d\n", pbch_msg->crc);
   return SRSRAN_SUCCESS;
 }
 
