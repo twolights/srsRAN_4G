@@ -336,7 +336,7 @@ private:
 
   // List of NR bands for FR1 (Table 5.4.2.3-1)
   // bands with more than one raster offset have multiple entries
-  static const uint32_t nof_nr_bands_fr1                                   = 36;
+  static const uint32_t nof_nr_bands_fr1                                   = 39;
   static constexpr std::array<nr_band, nof_nr_bands_fr1> nr_band_table_fr1 = {{
       // clang-format off
     {1, KHZ_100, 384000, 20, 396000, 422000, 20, 434000},
@@ -389,7 +389,14 @@ private:
     {82, KHZ_100, 166400, 20, 172400, 0, 0, 0},
     {83, KHZ_100, 140600, 20, 149600, 0, 0, 0},
     {84, KHZ_100, 384000, 20, 396000, 0, 0, 0},
-    {86, KHZ_100, 342000, 20, 356000, 0, 0, 0}
+    {86, KHZ_100, 342000, 20, 356000, 0, 0, 0},
+
+    // FR1-NTN satellite bands (3GPP TS 38.101-5, Table 5.4.2.3-1)
+    {254, KHZ_100, 322000, 20, 325300, 496700, 20, 500000},
+    {255, KHZ_100, 325300, 20, 332100, 305000, 20, 311800},
+    {256, KHZ_100, 396000, 20, 402000, 434000, 20, 440000},
+    // FR1-NTN satellite bands (3GPP TS 38.101-5, Table 5.4.2.3-2)
+    // TODO 10kHz delat_f_raster
       // clang-format on
   }};
 
@@ -416,7 +423,7 @@ private:
     uint32_t                    gscn_step;
     uint32_t                    gscn_last;
   };
-  static const uint32_t nof_nr_band_ss_raster                                                   = 29;
+  static const uint32_t nof_nr_band_ss_raster                                                   = 34;
   static constexpr std::array<nr_band_ss_raster, nof_nr_band_ss_raster> nr_band_ss_raster_table = {{
       {1, srsran_subcarrier_spacing_15kHz, SRSRAN_SSB_PATTERN_A, 5279, 1, 5419},
       {2, srsran_subcarrier_spacing_15kHz, SRSRAN_SSB_PATTERN_A, 4829, 1, 4969},
@@ -447,6 +454,12 @@ private:
       {77, srsran_subcarrier_spacing_30kHz, SRSRAN_SSB_PATTERN_C, 7711, 1, 8329},
       {78, srsran_subcarrier_spacing_30kHz, SRSRAN_SSB_PATTERN_C, 7711, 1, 8051},
       {79, srsran_subcarrier_spacing_30kHz, SRSRAN_SSB_PATTERN_C, 8480, 16, 8880},
+      // FR1-NTN satellite bands (3GPP TS 38.101-5, Table 5.4.3.3-1)
+      {254, srsran_subcarrier_spacing_15kHz, SRSRAN_SSB_PATTERN_A, 6215, 1, 6244},
+      {254, srsran_subcarrier_spacing_30kHz, SRSRAN_SSB_PATTERN_C, 6218, 1, 6241},
+      {255, srsran_subcarrier_spacing_15kHz, SRSRAN_SSB_PATTERN_A, 3818, 1, 3892},
+      {255, srsran_subcarrier_spacing_30kHz, SRSRAN_SSB_PATTERN_B, 3824, 1, 3886},
+      {256, srsran_subcarrier_spacing_15kHz, SRSRAN_SSB_PATTERN_A, 5429, 1, 5494},
   }};
 };
 
