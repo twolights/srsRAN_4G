@@ -879,7 +879,7 @@ int ssb_pss_search_with_mdct(srsran_ssb_t* q,
 
   srsran_pss_detect_res_t res;
 
-  if (srsran_detect_pss_mdct(&q->mdct, in, nof_samples, 4, &res) < SRSRAN_SUCCESS) {
+  if (srsran_detect_pss_mdct(&q->mdct, in, nof_samples, 4, true, &res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
 //  printf("MDCT: PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%f\n", res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
@@ -1437,7 +1437,7 @@ static int ssb_pss_find_with_mdct(srsran_ssb_t* q,
     return SRSRAN_ERROR;
   }
 
-  if (srsran_find_pss_mdct(&q->mdct, N_id_2, in, nof_samples, 4, res) < SRSRAN_SUCCESS) {
+  if (srsran_find_pss_mdct(&q->mdct, N_id_2, in, nof_samples, 4, true, res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
 //  printf("MDCT(find): PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%fHz\n",

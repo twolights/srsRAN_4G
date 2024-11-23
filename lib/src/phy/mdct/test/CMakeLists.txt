@@ -1,11 +1,14 @@
 add_executable(differential_prod_test differential_prod_test.c)
 target_link_libraries(differential_prod_test srsran_phy)
 
-add_executable(mdct_test mdct_test.c)
+add_executable(mdct_test mdct_test.c mdct_test_common.c)
 target_link_libraries(mdct_test srsran_phy)
 
 add_executable(unwrap_phase_test unwrap_phase_test.c)
 target_link_libraries(unwrap_phase_test srsran_phy)
+
+add_executable(mdct_benchmark mdct_benchmark.c mdct_test_common.c)
+target_link_libraries(mdct_benchmark srsran_phy)
 
 add_test(differential_prod_test differential_prod_test)
 add_test(mdct_test mdct_test)

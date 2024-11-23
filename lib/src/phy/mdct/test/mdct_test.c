@@ -1,6 +1,7 @@
 //
 // Created by ykchen on 9/12/24.
 //
+#include "mdct_test_common.h"
 #include "srsran/phy/mdct/mdct.h"
 #include "srsran/phy/utils/vector.h"
 #include <stdlib.h>
@@ -8,12 +9,6 @@
 
 static srsran_pss_mdct_t mdct;
 
-#define DETECTION_METHOD_CORRELATION 0
-#define DETECTION_METHOD_MDCT 1
-
-#define SAMPLING_FREQUENCY 23.04e6
-#define SYMBOL_SIZE 1536
-#define NOF_SAMPLES (SYMBOL_SIZE * 2)
 #define NUM_SINGLE_CELL_TESTS 9
 #define NUM_MULTIPLE_CELL_TESTS 15
 #define ADJACENT_CELL_TEST_START 2
@@ -57,24 +52,6 @@ static int TEST_DATA_MULTIPLE_CELLS[NUM_MULTIPLE_CELL_TESTS][8] = {
   {2, 600, 0, 100, 30, 1, 0, 50},
 };
 
-static void append_pss(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
-{
-  for (int i = 0; i < mdct->symbol_sz; i++) {
-    buffer[tau + i] += mdct->pss_x[N_id_2][i] * beta / 100.0;
-  }
-}
-
-static void prepare_mocked_received_samples(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, bool add_noise)
-{
-  if (add_noise) {
-    memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
-    // TODO fill buffer with noise
-  } else {
-    memset(buffer, 0, NOF_SAMPLES * sizeof(cf_t));
-  }
-  append_pss(mdct, buffer, N_id_2, tau, 100);
-}
-
 static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offset_in_hz, int sampling_frequency_in_hz)
 {
   srsran_vec_apply_cfo(buffer, ((float)offset_in_hz / (float)sampling_frequency_in_hz), buffer, nof_samples);
@@ -102,7 +79,7 @@ static void detect_pss(const cf_t* in, uint32_t nof_samples,
                        int method)
 {
   if(method == DETECTION_METHOD_MDCT) {
-    srsran_detect_pss_mdct(&mdct, in, nof_samples, window_sz, result);
+    srsran_detect_pss_mdct(&mdct, in, nof_samples, window_sz, true, result);
   } else {
     srsran_detect_pss_correlation(&mdct, in, nof_samples, window_sz, result);
   }
@@ -124,7 +101,7 @@ static bool test_single_cell(int cfo, int method)
     N_id_2 = TEST_DATA[i][0];
     tau    = TEST_DATA[i][1];
     printf("Test %d/%d ", i + 1, NUM_SINGLE_CELL_TESTS);
-    prepare_mocked_received_samples(&mdct, buffer, N_id_2, tau, false);
+    prepare_mocked_received_samples(&mdct, buffer, NOF_SAMPLES, N_id_2, tau, false);
     if (cfo != 0) {
       apply_frequency_offset(buffer, NOF_SAMPLES, cfo, SAMPLING_FREQUENCY);
     }
@@ -155,7 +132,7 @@ static bool test_multiple_cells(int cfo, int method)
     N_id_2 = row[0];
     tau = row[1];
     printf("Test %d/%d ", i + 1, NUM_MULTIPLE_CELL_TESTS);
-    prepare_mocked_received_samples(&mdct, buffer, N_id_2, tau, true);
+    prepare_mocked_received_samples(&mdct, buffer, NOF_SAMPLES, N_id_2, tau, true);
     adjacent_cells[0] = row + ADJACENT_CELL_TEST_START;
     adjacent_cells[1] = row + ADJACENT_CELL_TEST_START + ADJACENT_CELL_TEST_SIZE;
     for (j = 0; j < NUM_ADJACENT_CELLS; j++) {

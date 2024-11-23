@@ -280,10 +280,11 @@ static inline void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in
 }
 
 static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
-                                                uint32_t min_N_id_2, uint32_t max_N_id_2,
-                                                const cf_t* in, uint32_t nof_samples,
-                                                uint32_t window_sz,
-                                                srsran_pss_detect_res_t* result)
+                                         uint32_t min_N_id_2, uint32_t max_N_id_2,
+                                         const cf_t* in, uint32_t nof_samples,
+                                         uint32_t window_sz,
+                                         bool estimate_cfo,
+                                         srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
 
@@ -306,22 +307,26 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
       }
     }
   }
-  prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
+  if (estimate_cfo) {
+    prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
 //  estimate_coarse_cfo(mdct, in, nof_samples, result);
 //  estimate_cfo_by_half_pss(mdct, in, nof_samples, result);
-  estimate_coarse_cfo_with_mdct(mdct, result);
+    estimate_coarse_cfo_with_mdct(mdct, result);
+  }
   return SRSRAN_SUCCESS;
 }
 
 SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
                                       const cf_t* in, uint32_t nof_samples,
                                       uint32_t window_sz,
+                                      bool estimate_cfo,
                                       srsran_pss_detect_res_t* result)
 {
   return mdct_detect_pss_with_nid2_set(mdct,
                                        0, SRSRAN_NOF_NID_2_NR - 1,
                                        in, nof_samples,
                                        window_sz,
+                                       estimate_cfo,
                                        result);
 }
 
@@ -329,11 +334,13 @@ SRSRAN_API int srsran_find_pss_mdct(const srsran_pss_mdct_t* mdct,
                                     uint32_t N_id_2,
                                     const cf_t* in, uint32_t nof_samples,
                                     uint32_t window_sz,
+                                    bool estimate_cfo,
                                     srsran_pss_detect_res_t* result)
 {
   return mdct_detect_pss_with_nid2_set(mdct,
                                        N_id_2, N_id_2,
                                        in, nof_samples,
                                        window_sz,
+                                       estimate_cfo,
                                        result);
 }
