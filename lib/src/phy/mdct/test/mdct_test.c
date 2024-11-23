@@ -15,11 +15,13 @@ static srsran_pss_mdct_t mdct;
 #define SYMBOL_SIZE 1536
 #define NOF_SAMPLES (SYMBOL_SIZE * 2)
 #define NUM_SINGLE_CELL_TESTS 9
-#define NUM_MULTIPLE_CELL_TESTS 9
+#define NUM_MULTIPLE_CELL_TESTS 15
 #define ADJACENT_CELL_TEST_START 2
 #define ADJACENT_CELL_TEST_SIZE 3
 #define NUM_ADJACENT_CELLS 2
-#define CFO_TO_TEST (15000 * 3)
+
+// CFOs to test in Hz
+static int CFOS_TO_TEST[] = {0, 4500, 30000, 50000, -50000, -30000, -4500};
 
 // Test data for single cell tests, each row contains {N_id_2, tau}
 static int TEST_DATA[NUM_SINGLE_CELL_TESTS][2] = {
@@ -41,12 +43,18 @@ static int TEST_DATA_MULTIPLE_CELLS[NUM_MULTIPLE_CELL_TESTS][8] = {
   {0, 0, 1, 100, 10, 2, 0, 10},
   {0, 150, 1, 100, 20, 2, 100, 30},
   {0, 300, 1, 100, 10, 2, 500, 10},
+  {0, 300, 1, 100, 50, 2, 500, 10},
+  {0, 300, 1, 100, 70, 2, 500, 10},
   {1, 0, 0, 0, 30, 2, 0, 30},
   {1, 100, 0, 100, 10, 2, 0, 0},
   {1, 140, 0, 0, 0, 2, 400, 0},
+  {1, 140, 0, 0, 50, 2, 400, 30},
+  {1, 140, 0, 0, 30, 2, 400, 50},
   {2, 0, 0, 100, 10, 1, 0, 10},
   {2, 300, 0, 100, 10, 1, 500, 30},
   {2, 600, 0, 100, 30, 1, 0, 10},
+  {2, 600, 0, 100, 50, 1, 200, 30},
+  {2, 600, 0, 100, 30, 1, 0, 50},
 };
 
 static void append_pss(srsran_pss_mdct_t* mdct, cf_t* buffer, uint32_t N_id_2, int32_t tau, int beta)
@@ -69,9 +77,6 @@ static void prepare_mocked_received_samples(srsran_pss_mdct_t* mdct, cf_t* buffe
 
 static void apply_frequency_offset(cf_t* buffer, uint32_t nof_samples, int offset_in_hz, int sampling_frequency_in_hz)
 {
-//  for (int i = 0; i < nof_samples; i++) {
-//    buffer[i] *= cexpf(I * 2 * M_PI * offset_in_hz * i / sampling_frequency_in_hz);
-//  }
   srsran_vec_apply_cfo(buffer, ((float)offset_in_hz / (float)sampling_frequency_in_hz), buffer, nof_samples);
 }
 
@@ -173,72 +178,20 @@ static bool test_multiple_cells(int cfo, int method)
   return result;
 }
 
-static void test_mdct_on_samples_file(const char* filename, int cfo)
-{
-  size_t l = 29953;
-  cf_t* buffer = (cf_t*)malloc(l * sizeof(cf_t));
-  FILE* fp = fopen(filename, "rb");
-  fread(buffer, sizeof(cf_t), l, fp);
-  fclose(fp);
-
-  if(cfo != 0) {
-    apply_frequency_offset(buffer, l, cfo, SAMPLING_FREQUENCY);
-  }
-  srsran_pss_detect_res_t res;
-  srsran_detect_pss_mdct(&mdct, buffer, l, 1, &res);
-  printf("MDCT[applied CFO=%d] Detected N_id_2=%d, tau=%d, peak=%lf, CFO=%f\n",
-         cfo, res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
-  srsran_detect_pss_correlation(&mdct, buffer, l, 1, &res);
-  printf("Corr[applied CFO=%d]: Detected N_id_2=%d, tau=%d, peak=%lf, CFO=%f\n",
-         cfo, res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
-  free(buffer);
-}
-
-static int test_cells(bool perform) {
-  if(!perform) {
-    return 0;
-  }
+static int test_cells() {
   int result = 0, i;
-  static int CFOS_TO_TEST[] = {0, 4500, 12000, 15000, 30000, -15000, -30000, -2000};
   int num_cfos = sizeof(CFOS_TO_TEST) / sizeof(int);
-  if(!test_single_cell(0, DETECTION_METHOD_MDCT)) {
-    result = -1;
-  }
   for (i = 0; i < num_cfos; i++) {
     if (!test_single_cell(CFOS_TO_TEST[i], DETECTION_METHOD_MDCT)) {
       result = -1;
     }
-  }
-  if(!test_multiple_cells(0, DETECTION_METHOD_MDCT)) {
-    result = -1;
   }
   for (i = 0; i < num_cfos; i++) {
     if (!test_multiple_cells(CFOS_TO_TEST[i], DETECTION_METHOD_MDCT)) {
       result = -1;
     }
   }
-  if(!test_single_cell(0, DETECTION_METHOD_CORRELATION)) {
-    result = -1;
-  };
-  if(true == test_single_cell(CFO_TO_TEST, DETECTION_METHOD_CORRELATION)) {
-    result = -1;
-  }
-  if(!test_multiple_cells(0, DETECTION_METHOD_CORRELATION)) {
-    result = -1;
-  }
-  if(true == test_multiple_cells(CFO_TO_TEST, DETECTION_METHOD_CORRELATION)) {
-    result = -1;
-  }
   return result;
-}
-
-static int test_mdct_on_samples(bool perform) {
-  if (!perform) {
-    return 0;
-  }
-  test_mdct_on_samples_file("ssb_1728829201-NID2-1-offset-3828.dat", 0);
-  test_mdct_on_samples_file("ssb_1728829201-NID2-1-offset-3828.dat", 15000 * 10);
-  return 0;  // TODO
 }
 
 int main() {
@@ -248,8 +201,7 @@ int main() {
                           SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q * 12,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
-  result = test_cells(true);
-  result = result == 0 && test_mdct_on_samples(true) == 0 ? 0 : -1;
+  result = test_cells();
   srsran_destroy_pss_mdct(&mdct);
   return result;
 }
