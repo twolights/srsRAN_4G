@@ -231,6 +231,7 @@ struct phy_args_nr_t {
   float                  trs_sinr_ema_alpha    = 0.1f; ///< SINR measurement exponential average alpha
   float                  trs_cfo_ema_alpha     = 0.1f; ///< RSRP measurement exponential average alpha
   bool                   enable_worker_cfo     = true; ///< Enable/Disable open loop CFO correction at the workers
+  bool                   use_mdct              = false; ///< Use MDCT for SSB detection
 
   phy_args_nr_t()
   {

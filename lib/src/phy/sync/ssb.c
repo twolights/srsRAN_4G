@@ -48,9 +48,6 @@
  */
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
-//static bool use_mdct = false;
-static bool use_mdct = true;
-
 static int ssb_init_corr(srsran_ssb_t* q)
 {
   // Initialise correlation only if it is enabled
@@ -173,7 +170,7 @@ void srsran_ssb_free(srsran_ssb_t* q)
   srsran_dft_plan_free(&q->ifft_corr);
   srsran_pbch_nr_free(&q->pbch);
 
-  if (use_mdct) {
+  if (q->args.use_mdct) {
     srsran_destroy_pss_mdct(&q->mdct);
   }
 
@@ -410,7 +407,7 @@ static int ssb_setup_corr(srsran_ssb_t* q)
   // MDCT
   // TODO make Q & PSI configurable
   uint32_t Q = SRSRAN_MDCT_RECOMMENDED_Q * q->symbol_sz / SRSRAN_MDCT_PSS_FFT_SIZE;
-  if (use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->cfg.srate_hz, q->symbol_sz, q->f_offset, Q, SRSRAN_MDCT_RECOMMENDED_PSI) < SRSRAN_SUCCESS) {
+  if (q->args.use_mdct && srsran_prepare_pss_mdct(&q->mdct, q->cfg.srate_hz, q->symbol_sz, q->f_offset, Q, SRSRAN_MDCT_RECOMMENDED_PSI) < SRSRAN_SUCCESS) {
     ERROR("Error preparing PSS MDCT");
     return SRSRAN_ERROR;
   }
@@ -1331,7 +1328,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   uint32_t N_id_2        = 0;
   uint32_t t_offset      = 0;
   float    coarse_cfo_hz = 0.0f;
-  if (use_mdct) {
+  if (q->args.use_mdct) {
     if (ssb_pss_search_with_mdct(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
       return SRSRAN_ERROR;
@@ -1545,7 +1542,7 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
   uint32_t t_offset = 0;
   float cfo_hz = 0.0f;
   uint32_t N_id_2 = SRSRAN_NID_2_NR(N_id);
-  if (use_mdct) {
+  if (q->args.use_mdct) {
     srsran_pss_detect_res_t res = {};
     if (ssb_pss_find_with_mdct(q, q->sf_buffer, q->sf_sz + q->ssb_sz, N_id_2, &res) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");

@@ -54,11 +54,13 @@ public:
     float                       pbch_dmrs_thr   = 0.0f; ///< PBCH DMRS correlation detection threshold (0 means auto)
     float                       cfo_alpha       = 0.0f; ///< CFO averaging alpha (0 means auto)
     int                         thread_priority = 1;
+    bool                        use_mdct        = false; ///< Use MDCT for SSB detection
 
     cell_search::args_t get_cell_search() const
     {
       cell_search::args_t ret = {};
       ret.max_srate_hz        = srate_hz;
+      ret.use_mdct            = use_mdct;
       return ret;
     }
 

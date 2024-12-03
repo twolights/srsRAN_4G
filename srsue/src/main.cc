@@ -141,6 +141,7 @@ static int parse_args(all_args_t* args, int argc, char* argv[])
     ("rat.nr.nof_prb",      bpo::value<uint32_t>(&args->stack.rrc_nr.nof_prb)->default_value(52),                 "Actual NR carrier bandwidth in PRB")
     ("rat.nr.scs",          bpo::value<string>(&scs_khz)->default_value("15"),                                    "PDSCH subcarrier spacing in kHz")
     ("rat.nr.ssb_scs",      bpo::value<string>(&ssb_scs_khz)->default_value("15"),                                "SSB subcarrier spacing in kHz")
+    ("rat.nr.use_mdct",     bpo::value<bool>(&args->phy.use_mdct)->default_value(false),                          "Use MDCT algorithm to detect SSB")
 
     ("rrc.feature_group", bpo::value<uint32_t>(&args->stack.rrc.feature_group)->default_value(0xe6041000),                       "Hex value of the featureGroupIndicators field in the"
                                                                                                                                  "UECapabilityInformation message. Default 0xe6041000")

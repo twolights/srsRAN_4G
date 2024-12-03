@@ -42,6 +42,7 @@ bool cell_search::init(const args_t& args)
   ssb_args.min_scs           = args.ssb_min_scs;
   ssb_args.enable_search     = true;
   ssb_args.enable_decode     = true;
+  ssb_args.use_mdct          = args.use_mdct;
 
   // Initialise SSB
   if (srsran_ssb_init(&ssb, &ssb_args) < SRSRAN_SUCCESS) {

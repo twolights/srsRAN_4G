@@ -47,6 +47,7 @@ typedef struct SRSRAN_API {
 
   // Enable/Disable features
   bool disable_cfo; ///< Set to true for disabling the CFO compensation close loop
+  bool use_mdct;  ///< Set to true for enabling the MDCT for SSB detection
 
   // Signal detection thresholds and averaging coefficients
   float pbch_dmrs_thr; ///< NR-PBCH DMRS threshold for blind decoding, set to 0 for default

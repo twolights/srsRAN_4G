@@ -45,6 +45,8 @@ int srsran_ue_sync_nr_init(srsran_ue_sync_nr_t* q, const srsran_ue_sync_nr_args_
   ssb_args.enable_search     = true;
   ssb_args.enable_decode     = true;
   ssb_args.pbch_dmrs_thr     = args->pbch_dmrs_thr;
+  ssb_args.use_mdct          = args->use_mdct;
+
   if (srsran_ssb_init(&q->ssb, &ssb_args) < SRSRAN_SUCCESS) {
     ERROR("Error SSB init");
     return SRSRAN_ERROR;

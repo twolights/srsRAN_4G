@@ -61,6 +61,7 @@ typedef struct SRSRAN_API {
   bool                        enable_decode;      ///< Enables PBCH Decoder
   bool                        disable_polar_simd; ///< Disables polar encoder/decoder SIMD acceleration
   float                       pbch_dmrs_thr;      ///< NR-PBCH DMRS threshold for blind decoding, set to 0 for default
+  bool                        use_mdct;           ///< Use MDCT for PSS
 } srsran_ssb_args_t;
 
 /**

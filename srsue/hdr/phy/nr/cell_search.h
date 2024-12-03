@@ -34,6 +34,7 @@ public:
   struct args_t {
     double                      max_srate_hz;
     srsran_subcarrier_spacing_t ssb_min_scs = srsran_subcarrier_spacing_15kHz;
+    bool                        use_mdct    = false;
   };
 
   struct cfg_t {

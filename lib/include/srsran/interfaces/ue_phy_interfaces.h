@@ -64,6 +64,7 @@ struct phy_args_t {
   uint32_t pdsch_max_its   = 8;
   bool     meas_evm        = false;
   uint32_t nof_phy_threads = 3;
+  bool     use_mdct        = false;
 
   int worker_cpu_mask   = -1;
   int sync_cpu_affinity = -1;

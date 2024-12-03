@@ -106,6 +106,7 @@ void phy_nr_sa::init_background()
   nr::sync_sa::args_t sync_args = {};
   sync_args.srate_hz            = args.srate_hz;
   sync_args.thread_priority     = args.slot_recv_thread_prio;
+  sync_args.use_mdct            = args.use_mdct;
   if (not sync.init(sync_args, stack, radio)) {
     logger.error("Error initialising SYNC");
     return;
