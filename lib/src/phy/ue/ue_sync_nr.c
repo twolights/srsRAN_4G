@@ -99,6 +99,7 @@ int srsran_ue_sync_nr_set_cfg(srsran_ue_sync_nr_t* q, const srsran_ue_sync_nr_cf
   }
 
   // Transition to find
+//  printf("srsran_ue_sync_nr_set_cfg: Transition to find\n");
   q->state = SRSRAN_UE_SYNC_NR_STATE_FIND;
 
   return SRSRAN_SUCCESS;
@@ -203,10 +204,12 @@ static int ue_sync_nr_run_track(srsran_ue_sync_nr_t* q, cf_t* buffer)
 
   // Measure PSS/SSS and decode PBCH
   if (srsran_ssb_track(&q->ssb, buffer, q->N_id, q->ssb_idx, half_frame, &measurements, &pbch_msg) < SRSRAN_SUCCESS) {
+//   if (srsran_ssb_find(&q->ssb, buffer, q->N_id, &measurements, &pbch_msg) < SRSRAN_SUCCESS) {
     ERROR("Error finding SSB");
     return SRSRAN_ERROR;
   }
 
+//  printf("ue_sync_nr_run_track: pbch_msg.crc=%d, q->sf_sz=%d\n", pbch_msg.crc, q->sf_sz);
   // If the PBCH message was NOT decoded, transition to find
   if (!pbch_msg.crc) {
     q->state = SRSRAN_UE_SYNC_NR_STATE_FIND;
@@ -323,7 +326,7 @@ int srsran_ue_sync_nr_zerocopy(srsran_ue_sync_nr_t* q, cf_t** buffer, srsran_ue_
   outcome->cfo_hz   = q->cfo_hz;
   outcome->delay_us = q->avg_delay_us;
 
-  printf("outcome->in_sync=%d\n", outcome->in_sync);
+//  printf("outcome->in_sync=%d\n", outcome->in_sync);
   return SRSRAN_SUCCESS;
 }
 

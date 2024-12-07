@@ -306,6 +306,7 @@ void sync_sa::run_state_cell_camping()
   srsran::rf_buffer_t rf_buffer = {};
   rf_buffer.set_nof_samples(slot_sz);
   rf_buffer.set(0, nr_worker->get_buffer(0, 0));
+//  slot_synchronizer.set_cfo(cs_ret.ssb_res.measurements.cfo_hz);
   if (not slot_synchronizer.run_camping(rf_buffer, last_rx_time)) {
     logger.error("SYNC: detected out-of-sync... skipping slot ...");
     is_pending_tx_end = true;

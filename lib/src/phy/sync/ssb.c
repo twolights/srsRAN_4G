@@ -1654,7 +1654,7 @@ int srsran_ssb_track(srsran_ssb_t*                  q,
     return SRSRAN_ERROR;
   }
 
-  printf("ssb_track: CRC=%d\n", pbch_msg->crc);
+//  printf("ssb_track: CRC=%d\n", pbch_msg->crc);
   return SRSRAN_SUCCESS;
 }
 
