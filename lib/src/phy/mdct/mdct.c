@@ -43,11 +43,6 @@ calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
 {
   srsran_vec_prod_conj_ccc(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->symbol_sz);
   cf_t result = srsran_vec_acc_cc(mdct->temp, mdct->symbol_sz);
-//  printf("d=%d (Q=%u, psi=%u), atan2f(%f, %f) = %f\n",
-//         d, Q, psi,
-//         crealf(result), cimagf(result),
-//         atan2f(cimagf(result), crealf(result))
-//  );
   return result;
 }
 
@@ -66,8 +61,14 @@ calculate_C(const srsran_pss_mdct_t* mdct, uint32_t N_id_2)
 static void fill_x_tilde(srsran_pss_mdct_t* mdct, uint32_t r, uint32_t psi)
 {
   int32_t d = get_d(mdct, psi);
-  // TODO: Should be optimized by multiplying the constant phase instead of computing the diff. product for each N_id_2
   differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], (int)d, mdct->symbol_sz);
+}
+
+static inline void preserve_best_y_tilde(const srsran_pss_mdct_t* mdct)
+{
+  for (int psi = 0; psi < mdct->PSI; psi++) {
+    memcpy(mdct->y_tilde_best[psi], mdct->y_tilde[psi], mdct->symbol_sz * sizeof(cf_t));
+  }
 }
 
 static void prepare_pss_x(srsran_pss_mdct_t* mdct, int32_t f_offset)
@@ -115,13 +116,23 @@ SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
     free(mdct->phase);
     return SRSRAN_ERROR;
   }
+  mdct->y_tilde_best = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
+  if (mdct->y_tilde_best == NULL) {
+    free(mdct->y_tilde);
+    free(mdct->temp);
+    free(mdct->phase);
+    return SRSRAN_ERROR;
+  }
   for (i = 0; i < mdct->PSI; i++) {
       mdct->y_tilde[i] = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
-      if (mdct->y_tilde[i] == NULL) {
+      mdct->y_tilde_best[i] = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
+      if (mdct->y_tilde[i] == NULL || mdct->y_tilde_best[i] == NULL) {
         for (j = 0; j < i; j++) {
           free(mdct->y_tilde[j]);
+          free(mdct->y_tilde_best[j]);
         }
         free(mdct->y_tilde);
+        free(mdct->y_tilde_best);
         free(mdct->temp);
         free(mdct->phase);
         return SRSRAN_ERROR;
@@ -165,9 +176,12 @@ SRSRAN_API int srsran_destroy_pss_mdct(srsran_pss_mdct_t* mdct)
   mdct->temp = NULL;
   for (i = 0; i < mdct->PSI; i++) {
     free(mdct->y_tilde[i]);
+    free(mdct->y_tilde_best[i]);
     mdct->y_tilde[i] = NULL;
+    mdct->y_tilde_best[i] = NULL;
   }
   free(mdct->y_tilde);
+  free(mdct->y_tilde_best);
   return SRSRAN_SUCCESS;
 }
 
@@ -182,7 +196,7 @@ int estimate_coarse_cfo_with_mdct(const srsran_pss_mdct_t* mdct, srsran_pss_dete
   float theta_D, f_D;
   float* unwrapped = &mdct->phase[mdct->PSI];
   for (psi = 0; psi < mdct->PSI; psi++) {
-    srsran_vec_div_ccc(mdct->y_tilde[psi], mdct->x_tilde[res->N_id_2][psi], mdct->temp, mdct->symbol_sz);
+    srsran_vec_div_ccc(mdct->y_tilde_best[psi], mdct->x_tilde[res->N_id_2][psi], mdct->temp, mdct->symbol_sz);
     d = get_d(mdct, psi);
     theta_D = 0;
     nof_samples_to_process = mdct->symbol_sz - d;
@@ -304,11 +318,12 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
         result->tau = tau;
         result->N_id_2 = N_id_2;
         result->peak_value = peak;
+        preserve_best_y_tilde(mdct);
       }
     }
   }
   if (estimate_cfo) {
-    prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
+    // prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
 //  estimate_coarse_cfo(mdct, in, nof_samples, result);
 //  estimate_cfo_by_half_pss(mdct, in, nof_samples, result);
     estimate_coarse_cfo_with_mdct(mdct, result);
