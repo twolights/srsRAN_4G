@@ -323,9 +323,6 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
     }
   }
   if (estimate_cfo) {
-    // prepare_y_tilde(mdct, in, result->tau);  // TODO see if this can be optimized
-//  estimate_coarse_cfo(mdct, in, nof_samples, result);
-//  estimate_cfo_by_half_pss(mdct, in, nof_samples, result);
     estimate_coarse_cfo_with_mdct(mdct, result);
   }
   return SRSRAN_SUCCESS;
