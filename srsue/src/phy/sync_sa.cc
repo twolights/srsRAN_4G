@@ -21,6 +21,10 @@
 
 #include "srsue/hdr/phy/nr/sync_sa.h"
 #include "srsran/radio/rf_buffer.h"
+#include <ctime>
+
+
+timespec cell_search_epoch = {0, 0};
 
 namespace srsue {
 namespace nr {
@@ -266,7 +270,7 @@ void sync_sa::run_state_cell_search()
 
   // Leave CELL_SEARCH state if error or success and transition to IDLE
   if (cs_ret.result == cell_search::ret_t::CELL_FOUND || cell_search_nof_trials >= cell_search_max_trials) {
-    phy_state.state_exit();
+//    phy_state.state_exit();
   }
 }
 
@@ -335,6 +339,9 @@ void sync_sa::run_state_cell_camping()
 
 void sync_sa::run_thread()
 {
+  cell_search_epoch = {0, 0};
+  clock_gettime(CLOCK_MONOTONIC, &cell_search_epoch);
+
   while (running.load(std::memory_order_relaxed)) {
     logger.set_context(tti);
 

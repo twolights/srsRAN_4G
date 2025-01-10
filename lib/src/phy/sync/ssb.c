@@ -26,6 +26,7 @@
 #include "srsran/phy/utils/debug.h"
 #include "srsran/phy/utils/vector.h"
 #include <complex.h>
+#include <time.h>
 
 /*
  * Maximum allowed maximum sampling rate error in Hz
@@ -51,10 +52,15 @@
 
 #define CORRECT_N_ID_2  1
 #define CORRECT_N_ID_1  1
+#define TIME_TO_COUNT   (10 * 1e9)
+
+extern struct timespec cell_search_epoch;
 
 static int num_pss_detected = 0, num_correct_pss_detected = 0;
 static int num_correct_sss_detected = 0;
 static int num_pbch_decoded = 0;
+static struct timespec current_time, time_to_fixed;
+static bool should_output = true;
 
 
 static int ssb_init_corr(srsran_ssb_t* q)
@@ -1408,9 +1414,9 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   }
 
   // TODO take a look at false alarms
-  if (N_id == 0 && N_id_1 == 0 && N_id_2 == 0 && t_offset == 0 &&) {
+  if (N_id != 0 && N_id_1 != 0 && N_id_2 != 0 && t_offset != 0) {
     num_pss_detected++;
-    printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
+//    printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
 
     if (N_id_1 == CORRECT_N_ID_1) {
       num_correct_sss_detected++;
@@ -1422,7 +1428,20 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
 
     if (pbch_msg.crc) {
       num_pbch_decoded++;
+      if (time_to_fixed.tv_nsec == 0 && time_to_fixed.tv_sec == 0) {
+        clock_gettime(CLOCK_MONOTONIC, &time_to_fixed);
+      }
     }
+  }
+  clock_gettime(CLOCK_MONOTONIC, &current_time);
+  if (should_output &&
+      (current_time.tv_sec * 1e9 + current_time.tv_nsec) >= (cell_search_epoch.tv_sec * 1e9 + cell_search_epoch.tv_nsec + TIME_TO_COUNT)) {
+    printf("Number of PSS detected: %d\n", num_pss_detected);
+    printf("Number of correct SSS detected: %d\n", num_correct_sss_detected);
+    printf("Number of correct PSS detected: %d\n", num_correct_pss_detected);
+    printf("Number of PBCH decoded: %d\n", num_pbch_decoded);
+    printf("Time to first fixed: %ld\n", (long)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec));
+    should_output = false;
   }
 
   // TODO check timer here
@@ -1448,7 +1467,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   res->measurements = measurements;
   res->measurements.cfo_hz += coarse_cfo_hz;
 
-  printf("SSB detected: measured CFO=%f\n", res->measurements.cfo_hz);
+//  printf("SSB detected: measured CFO=%f\n", res->measurements.cfo_hz);
 
   return SRSRAN_SUCCESS;
 }
