@@ -49,8 +49,8 @@
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
 
-#define CORRECT_N_ID_2 = 1
-#define CORRECT_N_ID_1 = 1
+#define CORRECT_N_ID_2  1
+#define CORRECT_N_ID_1  1
 
 static int num_pss_detected = 0, num_correct_pss_detected = 0;
 static int num_correct_sss_detected = 0;
@@ -1379,7 +1379,6 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   // Select N_id
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
 
-  printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
 //  time_t now = time(NULL);
 //  char filename[100];
 //  sprintf(filename, "ssb_%ld-NID2-%u-offset-%d.dat", now, N_id_2, t_offset);
@@ -1407,6 +1406,28 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     ERROR("Error decoding PBCH");
     return SRSRAN_ERROR;
   }
+
+  // TODO take a look at false alarms
+  if (N_id == 0 && N_id_1 == 0 && N_id_2 == 0 && t_offset == 0 &&) {
+    num_pss_detected++;
+    printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
+
+    if (N_id_1 == CORRECT_N_ID_1) {
+      num_correct_sss_detected++;
+    }
+
+    if (N_id_2 == CORRECT_N_ID_2) {
+      num_correct_pss_detected++;
+    }
+
+    if (pbch_msg.crc) {
+      num_pbch_decoded++;
+    }
+  }
+
+  // TODO check timer here
+  // TODO save time to first fixed
+  // TODO if time elapsed is greater than designated time, output the results
 
   // If PBCH was not decoded, skip measurements
   if (!pbch_msg.crc) {
