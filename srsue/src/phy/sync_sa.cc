@@ -240,6 +240,7 @@ void sync_sa::run_state_idle()
 
 void sync_sa::run_state_cell_search()
 {
+  // TODO Initialize time counter here
   // Initialise buffer
   if (cell_search_nof_trials == 0) {
     srsran_vec_cf_zero(rx_buffer, slot_sz);

@@ -48,6 +48,15 @@
  */
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
+
+#define CORRECT_N_ID_2 = 1
+#define CORRECT_N_ID_1 = 1
+
+static int num_pss_detected = 0, num_correct_pss_detected = 0;
+static int num_correct_sss_detected = 0;
+static int num_pbch_decoded = 0;
+
+
 static int ssb_init_corr(srsran_ssb_t* q)
 {
   // Initialise correlation only if it is enabled
@@ -1508,8 +1517,8 @@ static int ssb_pss_find(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, u
   // Save findings
   *found_delay = best_delay;
 
-  printf("PSS(find): PSS detected: N_id_2=%d, delay=%d, peak=%f\n",
-         N_id_2, best_delay, best_corr);
+//  printf("PSS(find): PSS detected: N_id_2=%d, delay=%d, peak=%f\n",
+//         N_id_2, best_delay, best_corr);
   return SRSRAN_SUCCESS;
 }
 
@@ -1605,7 +1614,7 @@ int srsran_ssb_find(srsran_ssb_t*                  q,
 
   // SSB delay in SF
   float ssb_delay_us = (float)(1e6 * (((double)t_offset - (double)q->ssb_sz - (double)ssb_offset) / q->cfg.srate_hz));
-  printf("cfo_hz=%lf, ssb_delay_us=%f, pbch CRC=%d\n", cfo_hz, ssb_delay_us, pbch_msg->crc);
+//  printf("cfo_hz=%lf, ssb_delay_us=%f, pbch CRC=%d\n", cfo_hz, ssb_delay_us, pbch_msg->crc);
 
   // Add delay to measure
   meas->delay_us += ssb_delay_us;
