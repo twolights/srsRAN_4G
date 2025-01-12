@@ -64,11 +64,18 @@ static void fill_x_tilde(srsran_pss_mdct_t* mdct, uint32_t r, uint32_t psi)
   differential_product(mdct->pss_x[r], mdct->x_tilde[r][psi], (int)d, mdct->symbol_sz);
 }
 
-static inline void preserve_best_y_tilde(const srsran_pss_mdct_t* mdct)
+static inline void preserve_best_y_tilde(srsran_pss_mdct_t* mdct)
 {
-  for (int psi = 0; psi < mdct->PSI; psi++) {
-    memcpy(mdct->y_tilde_best[psi], mdct->y_tilde[psi], mdct->symbol_sz * sizeof(cf_t));
-  }
+//  for (int psi = 0; psi < mdct->PSI; psi++) {
+//    memcpy(mdct->y_tilde_best[psi], mdct->y_tilde[psi], mdct->symbol_sz * sizeof(cf_t));
+//  }
+  mdct->y_tilde_best = mdct->y_tilde;
+}
+
+static inline void switch_y_tilde(srsran_pss_mdct_t* mdct)
+{
+  mdct->y_tilde_current_index = !mdct->y_tilde_current_index;
+  mdct->y_tilde = mdct->y_tilde_buffers[mdct->y_tilde_current_index];
 }
 
 static void prepare_pss_x(srsran_pss_mdct_t* mdct, int32_t f_offset)
@@ -95,8 +102,8 @@ static void prepare_pss_x(srsran_pss_mdct_t* mdct, int32_t f_offset)
 }
 
 SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
-                            uint32_t srate_hz, uint32_t symbol_sz, int32_t f_offset,
-                            uint32_t Q, uint32_t PSI)
+                                       uint32_t srate_hz, uint32_t symbol_sz, int32_t f_offset,
+                                       uint32_t Q, uint32_t PSI)
 {
   int i, j;
   mdct->srate_hz = srate_hz;
@@ -110,19 +117,18 @@ SRSRAN_API int srsran_prepare_pss_mdct(srsran_pss_mdct_t* mdct,
     return SRSRAN_ERROR;
   }
   mdct->phase = (float*)malloc(symbol_sz * sizeof(float));
-  mdct->y_tilde = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
-  if (mdct->y_tilde == NULL) {
-    free(mdct->temp);
-    free(mdct->phase);
-    return SRSRAN_ERROR;
+  for (i = 0; i < 2; i++) {
+    mdct->y_tilde_buffers[i] = (cf_t**)malloc(PSI * sizeof(cf_t*));
+    if (mdct->y_tilde_buffers[0] == NULL) {
+      free(mdct->y_tilde_buffers[0]);
+      free(mdct->temp);
+      free(mdct->phase);
+      return SRSRAN_ERROR;
+    }
   }
-  mdct->y_tilde_best = (cf_t**)malloc(mdct->PSI * sizeof(cf_t*));
-  if (mdct->y_tilde_best == NULL) {
-    free(mdct->y_tilde);
-    free(mdct->temp);
-    free(mdct->phase);
-    return SRSRAN_ERROR;
-  }
+  mdct->y_tilde_current_index = 0;
+  mdct->y_tilde = mdct->y_tilde_buffers[0];
+  mdct->y_tilde_best = mdct->y_tilde_buffers[1];
   for (i = 0; i < mdct->PSI; i++) {
       mdct->y_tilde[i] = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
       mdct->y_tilde_best[i] = (cf_t*)malloc(symbol_sz * sizeof(cf_t));
@@ -293,17 +299,19 @@ static inline void prepare_y_tilde(const srsran_pss_mdct_t* mdct, const cf_t* in
   }
 }
 
-static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
-                                         uint32_t min_N_id_2, uint32_t max_N_id_2,
-                                         const cf_t* in, uint32_t nof_samples,
-                                         uint32_t window_sz,
-                                         bool estimate_cfo,
-                                         srsran_pss_detect_res_t* result)
+static inline int mdct_detect_pss_with_nid2_set(srsran_pss_mdct_t* mdct,
+                                                uint32_t min_N_id_2, uint32_t max_N_id_2,
+                                                const cf_t* in, uint32_t nof_samples,
+                                                uint32_t window_sz,
+                                                bool estimate_cfo,
+                                                srsran_pss_detect_res_t* result)
 {
   float peak = -1 * INFINITY;
+  bool y_tilde_switched;
 
   // TODO: Should be optimized by multiplying the constant phase instead of computing MDCT for each N_id_2
   for (int32_t tau = 0; tau < nof_samples - mdct->symbol_sz; tau += (int)window_sz) {
+    y_tilde_switched = false;
     prepare_y_tilde(mdct, in, tau);
     for (uint32_t N_id_2 = min_N_id_2; N_id_2 <= max_N_id_2; N_id_2++) {
       cf_t corr = calculate_C(mdct, N_id_2);
@@ -319,7 +327,11 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
         result->N_id_2 = N_id_2;
         result->peak_value = peak;
         preserve_best_y_tilde(mdct);
+        y_tilde_switched = true;
       }
+    }
+    if(y_tilde_switched) {
+      switch_y_tilde(mdct);
     }
   }
   if (estimate_cfo) {
@@ -328,7 +340,7 @@ static int mdct_detect_pss_with_nid2_set(const srsran_pss_mdct_t* mdct,
   return SRSRAN_SUCCESS;
 }
 
-SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
+SRSRAN_API int srsran_detect_pss_mdct(srsran_pss_mdct_t* mdct,
                                       const cf_t* in, uint32_t nof_samples,
                                       uint32_t window_sz,
                                       bool estimate_cfo,
@@ -342,7 +354,7 @@ SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
                                        result);
 }
 
-SRSRAN_API int srsran_find_pss_mdct(const srsran_pss_mdct_t* mdct,
+SRSRAN_API int srsran_find_pss_mdct(srsran_pss_mdct_t* mdct,
                                     uint32_t N_id_2,
                                     const cf_t* in, uint32_t nof_samples,
                                     uint32_t window_sz,

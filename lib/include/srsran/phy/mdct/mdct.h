@@ -15,6 +15,8 @@
 typedef struct SRSRAN_API {
   cf_t* pss_x[SRSRAN_NOF_NID_2_NR];
   cf_t** x_tilde[SRSRAN_NOF_NID_2_NR];
+  uint8_t y_tilde_current_index;
+  cf_t** y_tilde_buffers[2];
   cf_t** y_tilde;
   cf_t** y_tilde_best;
   cf_t* temp;
@@ -43,12 +45,12 @@ SRSRAN_API int srsran_detect_pss_correlation(const srsran_pss_mdct_t* mdct,
                                              uint32_t window_sz,
                                              srsran_pss_detect_res_t* result);
 
-SRSRAN_API int srsran_detect_pss_mdct(const srsran_pss_mdct_t* mdct,
+SRSRAN_API int srsran_detect_pss_mdct(srsran_pss_mdct_t* mdct,
                                       const cf_t* in, uint32_t nof_samples,
                                       uint32_t window_sz,
                                       bool estimate_cfo,
                                       srsran_pss_detect_res_t* result);
-SRSRAN_API int srsran_find_pss_mdct(const srsran_pss_mdct_t* mdct,
+SRSRAN_API int srsran_find_pss_mdct(srsran_pss_mdct_t* mdct,
                                     uint32_t N_id_2,
                                     const cf_t* in, uint32_t nof_samples,
                                     uint32_t window_sz,
