@@ -50,8 +50,9 @@
 #define SSB_PBCH_DMRS_DEFAULT_CORR_THR 0.5f
 
 
+#define IS_VALID_NID    (N_id_1 != 0 && N_id_2 != 0 && t_offset != 0)
 #define CORRECT_N_ID_2  1
-#define CORRECT_N_ID_1  1
+#define CORRECT_N_ID_1  2
 #define TIME_TO_COUNT   (10 * 1e9)
 
 extern struct timespec cell_search_epoch;
@@ -1385,12 +1386,15 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   // Select N_id
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
 
-//  time_t now = time(NULL);
-//  char filename[100];
-//  sprintf(filename, "ssb_%ld-NID2-%u-offset-%d.dat", now, N_id_2, t_offset);
-//  FILE* f = fopen(filename, "wb");
-//  fwrite(in, sizeof(cf_t), nof_samples, f);
-//  fclose(f);
+  if (IS_VALID_NID) {
+    num_pss_detected++;
+    if (N_id_1 == CORRECT_N_ID_1) {
+      num_correct_sss_detected++;
+    }
+    if (N_id_2 == CORRECT_N_ID_2) {
+      num_correct_pss_detected++;
+    }
+  }
 
   // Select the most suitable SSB candidate
   uint32_t                n_hf      = 0;
@@ -1414,18 +1418,8 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   }
 
   // TODO take a look at false alarms
-  if (N_id != 0 && N_id_1 != 0 && N_id_2 != 0 && t_offset != 0) {
-    num_pss_detected++;
-//    printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
-
-    if (N_id_1 == CORRECT_N_ID_1) {
-      num_correct_sss_detected++;
-    }
-
-    if (N_id_2 == CORRECT_N_ID_2) {
-      num_correct_pss_detected++;
-    }
-
+//  printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
+  if (IS_VALID_NID) {
     if (pbch_msg.crc) {
       num_pbch_decoded++;
       if (time_to_fixed.tv_nsec == 0 && time_to_fixed.tv_sec == 0) {
@@ -1440,8 +1434,10 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     printf("Number of correct SSS detected: %d\n", num_correct_sss_detected);
     printf("Number of correct PSS detected: %d\n", num_correct_pss_detected);
     printf("Number of PBCH decoded: %d\n", num_pbch_decoded);
-    printf("Time to first fixed: %ld\n", (long)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec));
+    float time_to_first_fixed = (float)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec) / 1e9 * 1e3;
+    printf("Time to first fixed: %ld ms\n", (long)time_to_first_fixed);
     should_output = false;
+    exit(0);
   }
 
   // TODO check timer here
