@@ -17,6 +17,7 @@ void srsran_vec_cf_copy_reversed(const cf_t* a, cf_t* b, uint32_t n)
   }
 }
 
+#if 0
 // TODO make this inline?
 void differential_product(const cf_t* a, cf_t* c, uint32_t d, uint32_t n)
 {
@@ -34,3 +35,4 @@ void differential_product(const cf_t* a, cf_t* c, uint32_t d, uint32_t n)
   srsran_vec_prod_conj_ccc(&a[d], &a[0], &c[0], n - d);
   srsran_vec_prod_conj_ccc(&a[0], &a[n - d], &c[n - d], d);
 }
+#endif
