@@ -10,6 +10,7 @@
 void ssb_vec_prod_conj_circ_shift(const cf_t* a, const cf_t* b, cf_t* c, uint32_t n, int shift);
 
 
+#if 0
 void srsran_vec_cf_copy_reversed(const cf_t* a, cf_t* b, uint32_t n)
 {
   for (uint32_t i = 0; i < n; i++) {
@@ -17,7 +18,6 @@ void srsran_vec_cf_copy_reversed(const cf_t* a, cf_t* b, uint32_t n)
   }
 }
 
-#if 0
 // TODO make this inline?
 void differential_product(const cf_t* a, cf_t* c, uint32_t d, uint32_t n)
 {

@@ -7,7 +7,8 @@
 #include "srsran/phy/utils/vector.h"
 #include <time.h>
 
-#define NUM_MDCT_TESTS 10000000
+#define NUM_MDCT_TESTS 10
+#define SAMPLE_LENGTH 29616
 
 int main() {
   srsran_pss_mdct_t mdct;
@@ -16,16 +17,18 @@ int main() {
                           SYMBOL_SIZE, -30,
                           SRSRAN_MDCT_RECOMMENDED_Q * 12,
                           SRSRAN_MDCT_RECOMMENDED_PSI);
-  cf_t buffer[SYMBOL_SIZE];
+  cf_t buffer[SAMPLE_LENGTH];
+//  cf_t buffer[SYMBOL_SIZE];
   srsran_pss_detect_res_t res;
-  prepare_mocked_received_samples(&mdct, buffer, SYMBOL_SIZE, 0, 0, false);
+  prepare_mocked_received_samples(&mdct, buffer, SAMPLE_LENGTH, 2, 1516, false);
 
   clock_t start = clock(), end;
 
   for (int i = 0; i < NUM_MDCT_TESTS; i++) {
-    srsran_detect_pss_mdct(&mdct, buffer, SYMBOL_SIZE, 1, false, &res);
+    srsran_detect_pss_mdct(&mdct, buffer, SAMPLE_LENGTH, 1, false, &res);
   }
 
+  printf("N_id_2=%d, tau=%d, peak=%f, CFO=%f\n", res.N_id_2, res.tau, res.peak_value, res.coarse_cfo);
   end = clock();
   printf("Time: %f\n", (double)(end - start) / CLOCKS_PER_SEC);
 

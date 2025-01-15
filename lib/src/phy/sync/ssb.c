@@ -62,6 +62,7 @@ static int num_correct_sss_detected = 0;
 static int num_pbch_decoded = 0;
 static struct timespec current_time, time_to_fixed;
 static bool should_output = true;
+static double average_pbch_decode_time = 0;
 
 
 static int ssb_init_corr(srsran_ssb_t* q)
@@ -1344,6 +1345,10 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   uint32_t N_id_2        = 0;
   uint32_t t_offset      = 0;
   float    coarse_cfo_hz = 0.0f;
+
+  struct timespec start;
+
+  clock_gettime(CLOCK_MONOTONIC, &start);
   if (q->args.use_mdct) {
     if (ssb_pss_search_with_mdct(q, in, nof_samples, &N_id_2, &t_offset, &coarse_cfo_hz) < SRSRAN_SUCCESS) {
       ERROR("Error searching for N_id_2");
@@ -1385,6 +1390,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
 
   // Select N_id
   uint32_t N_id = SRSRAN_NID_NR(N_id_1, N_id_2);
+//  printf("SSB detected: N_id=%d, N_id_1=%d, N_id_2=%d, delay=%d, CFO=%f\n", N_id, N_id_1, N_id_2, t_offset, coarse_cfo_hz);
 
   if (IS_VALID_NID) {
     num_pss_detected++;
@@ -1428,6 +1434,9 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     }
   }
   clock_gettime(CLOCK_MONOTONIC, &current_time);
+  if (pbch_msg.crc) {
+    average_pbch_decode_time += (current_time.tv_sec - start.tv_sec) + (current_time.tv_nsec - start.tv_nsec) / 1e9;
+  }
   if (should_output &&
       (current_time.tv_sec * 1e9 + current_time.tv_nsec) >= (cell_search_epoch.tv_sec * 1e9 + cell_search_epoch.tv_nsec + TIME_TO_COUNT)) {
     printf("Number of PSS detected: %d\n", num_pss_detected);
@@ -1436,6 +1445,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     printf("Number of PBCH decoded: %d\n", num_pbch_decoded);
     float time_to_first_fixed = (float)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec) / 1e9 * 1e3;
     printf("Time to first fixed: %ld ms\n", (long)time_to_first_fixed);
+    printf("Average PBCH decode time: %f ms\n", average_pbch_decode_time / num_pbch_decoded * 1000);
     should_output = false;
     exit(0);
   }
@@ -1448,6 +1458,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   if (!pbch_msg.crc) {
     return SRSRAN_SUCCESS;
   }
+
 
   // Perform measurements from PSS and SSS
   srsran_csi_trs_measurements_t measurements = {};
@@ -1479,7 +1490,7 @@ static int ssb_pss_find_with_mdct(srsran_ssb_t* q,
     return SRSRAN_ERROR;
   }
 
-  if (srsran_find_pss_mdct(&q->mdct, N_id_2, in, nof_samples, 4, true, res) < SRSRAN_SUCCESS) {
+  if (srsran_find_pss_mdct(&q->mdct, N_id_2, in, nof_samples, 1, true, res) < SRSRAN_SUCCESS) {
     return SRSRAN_ERROR;
   }
 //  printf("MDCT(find): PSS detected: N_id_2=%d, delay=%d, peak=%f, CFO=%fHz\n",
