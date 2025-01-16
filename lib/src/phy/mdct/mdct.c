@@ -360,8 +360,8 @@ static inline int mdct_detect_pss_with_nid2_set(srsran_pss_mdct_t* mdct,
     }
   }
   if (estimate_cfo) {
-    result->coarse_cfo = 0;
-//    estimate_coarse_cfo_with_mdct(mdct, result);
+//    result->coarse_cfo = 0;
+    estimate_coarse_cfo_with_mdct(mdct, result);
   }
   return SRSRAN_SUCCESS;
 }

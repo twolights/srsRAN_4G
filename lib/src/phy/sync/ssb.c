@@ -53,7 +53,7 @@
 #define IS_VALID_NID    (N_id_1 != 0 && N_id_2 != 0 && t_offset != 0)
 #define CORRECT_N_ID_2  1
 #define CORRECT_N_ID_1  2
-#define TIME_TO_COUNT   (10 * 1e9)
+#define TIME_TO_COUNT   (20 * 1e9)
 
 extern struct timespec cell_search_epoch;
 
@@ -62,7 +62,7 @@ static int num_correct_sss_detected = 0;
 static int num_pbch_decoded = 0;
 static struct timespec current_time, time_to_fixed;
 static bool should_output = true;
-static double average_pbch_decode_time = 0;
+static double average_pbch_decode_time = 0, max_pbch_decode_time = 0, min_pbch_decode_time = 0;
 
 
 static int ssb_init_corr(srsran_ssb_t* q)
@@ -1400,6 +1400,8 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     if (N_id_2 == CORRECT_N_ID_2) {
       num_correct_pss_detected++;
     }
+  } else {
+//    printf("Search failed, N_id=%d, nof_samples=%d\n", N_id, nof_samples);
   }
 
   // Select the most suitable SSB candidate
@@ -1435,7 +1437,14 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
   }
   clock_gettime(CLOCK_MONOTONIC, &current_time);
   if (pbch_msg.crc) {
-    average_pbch_decode_time += (current_time.tv_sec - start.tv_sec) + (current_time.tv_nsec - start.tv_nsec) / 1e9;
+    double time = (current_time.tv_sec - start.tv_sec) + (current_time.tv_nsec - start.tv_nsec) / 1e9;
+    if (time > max_pbch_decode_time) {
+      max_pbch_decode_time = time;
+    }
+    if (min_pbch_decode_time == 0 || time < min_pbch_decode_time) {
+      min_pbch_decode_time = time;
+    }
+    average_pbch_decode_time += time;
   }
   if (should_output &&
       (current_time.tv_sec * 1e9 + current_time.tv_nsec) >= (cell_search_epoch.tv_sec * 1e9 + cell_search_epoch.tv_nsec + TIME_TO_COUNT)) {
@@ -1445,6 +1454,8 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     printf("Number of PBCH decoded: %d\n", num_pbch_decoded);
     float time_to_first_fixed = (float)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec) / 1e9 * 1e3;
     printf("Time to first fixed: %ld ms\n", (long)time_to_first_fixed);
+    printf("Max/Min PBCH decode time: %f/%f ms\n", max_pbch_decode_time * 1000, min_pbch_decode_time * 1000);
+    printf("Total PBCH decode time: %f ms\n", average_pbch_decode_time * 1000);
     printf("Average PBCH decode time: %f ms\n", average_pbch_decode_time / num_pbch_decoded * 1000);
     should_output = false;
     exit(0);

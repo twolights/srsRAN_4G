@@ -24,6 +24,8 @@
 namespace srsue {
 namespace nr {
 
+static uint64_t total_received_samples = 0;
+
 slot_sync::slot_sync(srslog::basic_logger& logger_) : logger(logger_), sfn_sync_buff(1) {}
 
 slot_sync::~slot_sync()
@@ -122,6 +124,8 @@ int slot_sync::recv_callback(srsran::rf_buffer_t& data, srsran_timestamp_t* rx_t
   run_stack_tti();
 
   logger.debug("SYNC:  received %d samples from radio", data.get_nof_samples());
+  total_received_samples += data.get_nof_samples();
+  logger.debug("SYNC:  received %ld samples from radio in total so far", total_received_samples);
 
   return data.get_nof_samples();
 }
