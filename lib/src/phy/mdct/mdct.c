@@ -5,6 +5,7 @@
 #include "srsran/phy/mdct/mdct.h"
 #include "srsran/phy/dft/dft.h"
 #include "srsran/phy/utils/vector.h"
+#include "srsran/phy/utils/vector_simd.h"
 //#include "srsran/phy/mdct/differential_prod.h"
 #include <math.h>
 #include <stdlib.h>
@@ -28,7 +29,7 @@ inline static void differential_product(const cf_t* a, cf_t* c, uint32_t d, uint
   }
   srsran_vec_prod_conj_ccc(&a[d], &a[0], &c[0], half_d);
   srsran_vec_prod_conj_ccc(&a[0], &a[half_d], &c[half_d], d);
-  srsran_vec_cf_copy_reversed(&c[0], &c[n - half], half);
+//  srsran_vec_cf_copy_reversed(&c[0], &c[n - half], half);
   //  // If n is odd, the middle element is multiplied by its conjugate
   //  c[half + 1] = a[half + 1 + d]  * conj(a[half + 1]);
   //  srsran_vec_prod_conj_ccc(&a[d], &a[0], &c[0], n - d);
@@ -66,7 +67,8 @@ static inline uint32_t get_d(const srsran_pss_mdct_t* mdct, uint32_t psi)
 static inline cf_t
 calculate_D(const srsran_pss_mdct_t* mdct, uint32_t N_id_2, uint32_t psi)
 {
-  srsran_vec_prod_conj_ccc(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->symbol_sz);
+  srsran_vec_prod_conj_ccc_simd(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->symbol_sz);
+//  srsran_vec_prod_conj_ccc(mdct->y_tilde[psi], mdct->x_tilde[N_id_2][psi], mdct->temp, mdct->symbol_sz);
   cf_t result = srsran_vec_acc_cc(mdct->temp, mdct->symbol_sz);
   return result;
 }
@@ -230,7 +232,7 @@ int estimate_coarse_cfo_with_mdct(const srsran_pss_mdct_t* mdct, srsran_pss_dete
     srsran_vec_div_ccc(mdct->y_tilde_best[psi], mdct->x_tilde[res->N_id_2][psi], mdct->temp, mdct->symbol_sz);
     d = get_d(mdct, psi);
     theta_D = 0;
-    nof_samples_to_process = mdct->symbol_sz - d;
+    nof_samples_to_process = mdct->symbol_sz / 2 - d;
     // Get average f_D over all but the tail d the samples
     for (i = 0; i < nof_samples_to_process; i++) {
       theta_D += cargf(mdct->temp[i]);

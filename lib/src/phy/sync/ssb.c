@@ -1400,8 +1400,10 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     if (N_id_2 == CORRECT_N_ID_2) {
       num_correct_pss_detected++;
     }
-  } else {
-//    printf("Search failed, N_id=%d, nof_samples=%d\n", N_id, nof_samples);
+    printf("Number of PSS detected: %d\n", num_pss_detected);
+    printf("Number of correct SSS detected: %d\n", num_correct_sss_detected);
+    printf("Number of correct PSS detected: %d\n", num_correct_pss_detected);
+    printf("CFO = %lf\n", coarse_cfo_hz);
   }
 
   // Select the most suitable SSB candidate
@@ -1446,11 +1448,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     }
     average_pbch_decode_time += time;
   }
-  if (should_output &&
-      (current_time.tv_sec * 1e9 + current_time.tv_nsec) >= (cell_search_epoch.tv_sec * 1e9 + cell_search_epoch.tv_nsec + TIME_TO_COUNT)) {
-    printf("Number of PSS detected: %d\n", num_pss_detected);
-    printf("Number of correct SSS detected: %d\n", num_correct_sss_detected);
-    printf("Number of correct PSS detected: %d\n", num_correct_pss_detected);
+  if (true) {
     printf("Number of PBCH decoded: %d\n", num_pbch_decoded);
     float time_to_first_fixed = (float)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec) / 1e9 * 1e3;
     printf("Time to first fixed: %ld ms\n", (long)time_to_first_fixed);
@@ -1458,7 +1456,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     printf("Total PBCH decode time: %f ms\n", average_pbch_decode_time * 1000);
     printf("Average PBCH decode time: %f ms\n", average_pbch_decode_time / num_pbch_decoded * 1000);
     should_output = false;
-    exit(0);
+//    exit(0);
   }
 
   // TODO check timer here
