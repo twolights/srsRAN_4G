@@ -117,7 +117,7 @@ typedef struct SRSRAN_API {
  * @param[in] args NR UE synchronization initialization arguments
  * @return SRSRAN_SUCCESS if no error occurs, SRSRAN_ERROR code otherwise
  */
-SRSRAN_API int srsran_ue_sync_nr_init(srsran_ue_sync_nr_t* q, const srsran_ue_sync_nr_args_t* args);
+SRSRAN_API int srsran_ue_sync_nr_init(srsran_ue_sync_nr_t* q, const srsran_ue_sync_nr_args_t* args, uint64_t* epoch_tti_ms_source);
 
 /**
  * @brief Deallocate an NR UE synchronization object

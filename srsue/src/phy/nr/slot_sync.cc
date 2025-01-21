@@ -25,6 +25,7 @@ namespace srsue {
 namespace nr {
 
 static uint64_t total_received_samples = 0;
+uint64_t epoch_tti_ms = 0;
 
 slot_sync::slot_sync(srslog::basic_logger& logger_) : logger(logger_), sfn_sync_buff(1) {}
 
@@ -63,7 +64,7 @@ bool slot_sync::init(const args_t& args, stack_interface_phy_nr* stack_, srsran:
   ue_sync_nr_args.recv_obj                 = this;
   ue_sync_nr_args.recv_callback            = slot_sync_recv_callback;
 
-  if (srsran_ue_sync_nr_init(&ue_sync_nr, &ue_sync_nr_args) < SRSRAN_SUCCESS) {
+  if (srsran_ue_sync_nr_init(&ue_sync_nr, &ue_sync_nr_args, &epoch_tti_ms) < SRSRAN_SUCCESS) {
     logger.error("Error initiating UE SYNC NR object");
     return false;
   }
@@ -206,6 +207,7 @@ void slot_sync::run_stack_tti()
 
   // update timestamp
   srsran_timestamp_copy(&stack_tti_ts, &stack_tti_ts_new);
+  epoch_tti_ms = stack_tti_ts.full_secs * 1000 + stack_tti_ts.frac_secs * 1000;
 }
 
 srsran_slot_cfg_t slot_sync::get_slot_cfg()

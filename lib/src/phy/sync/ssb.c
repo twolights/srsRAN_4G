@@ -56,6 +56,7 @@
 #define TIME_TO_COUNT   (20 * 1e9)
 
 extern struct timespec cell_search_epoch;
+extern uint64_t* epoch_tti_ms;
 
 static int num_pss_detected = 0, num_correct_pss_detected = 0;
 static int num_correct_sss_detected = 0;
@@ -63,6 +64,8 @@ static int num_pbch_decoded = 0;
 static struct timespec current_time, time_to_fixed;
 static bool should_output = true;
 static double average_pbch_decode_time = 0, max_pbch_decode_time = 0, min_pbch_decode_time = 0;
+static uint64_t epoch_tti_elapsed_since_last_fixed = 0, tti_to_fixed = 0;
+static uint64_t epoch_tti_to_fixed_count = 0, epoch_tti_to_first_fixed = 0;
 
 
 static int ssb_init_corr(srsran_ssb_t* q)
@@ -706,6 +709,7 @@ static int ssb_demodulate(srsran_ssb_t* q,
                           cf_t          ssb_grid[SRSRAN_SSB_NOF_RE])
 {
   const cf_t* in_ptr = &in[t_offset];
+  float avg_power = 0.0f;
   for (uint32_t l = 0; l < SRSRAN_SSB_DURATION_NSYMB; l++) {
     // Advance half CP, to avoid inter symbol interference
     in_ptr += SRSRAN_FLOOR(q->cp_sz, 2);
@@ -717,6 +721,7 @@ static int ssb_demodulate(srsran_ssb_t* q,
       srsran_vec_cf_copy(q->tmp_time, in_ptr, q->symbol_sz);
     }
     in_ptr += q->symbol_sz + SRSRAN_CEIL(q->cp_sz, 2);
+    avg_power += srsran_vec_avg_power_cf(q->tmp_time, q->symbol_sz);
 
     // Phase compensation
     cf_t phase_compensation =
@@ -752,6 +757,7 @@ static int ssb_demodulate(srsran_ssb_t* q,
     }
   }
 
+//  printf("avg_power: %f\n", avg_power / SRSRAN_SSB_DURATION_NSYMB);
   return SRSRAN_SUCCESS;
 }
 
@@ -1403,7 +1409,7 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
     printf("Number of PSS detected: %d\n", num_pss_detected);
     printf("Number of correct SSS detected: %d\n", num_correct_sss_detected);
     printf("Number of correct PSS detected: %d\n", num_correct_pss_detected);
-    printf("CFO = %lf\n", coarse_cfo_hz);
+//    printf("CFO = %lf\n", coarse_cfo_hz);
   }
 
   // Select the most suitable SSB candidate
@@ -1447,14 +1453,24 @@ int srsran_ssb_search(srsran_ssb_t* q, const cf_t* in, uint32_t nof_samples, srs
       min_pbch_decode_time = time;
     }
     average_pbch_decode_time += time;
+    tti_to_fixed = *epoch_tti_ms - epoch_tti_elapsed_since_last_fixed;
+    epoch_tti_to_fixed_count += tti_to_fixed;
+    epoch_tti_elapsed_since_last_fixed = *epoch_tti_ms;
+    if (epoch_tti_to_first_fixed == 0) {
+      epoch_tti_to_first_fixed = tti_to_fixed;
+    }
   }
   if (true) {
     printf("Number of PBCH decoded: %d\n", num_pbch_decoded);
-    float time_to_first_fixed = (float)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec) / 1e9 * 1e3;
-    printf("Time to first fixed: %ld ms\n", (long)time_to_first_fixed);
-    printf("Max/Min PBCH decode time: %f/%f ms\n", max_pbch_decode_time * 1000, min_pbch_decode_time * 1000);
-    printf("Total PBCH decode time: %f ms\n", average_pbch_decode_time * 1000);
-    printf("Average PBCH decode time: %f ms\n", average_pbch_decode_time / num_pbch_decoded * 1000);
+    printf("Avg/Max/Min PBCH decode time: %f/%f/%f ms\n", average_pbch_decode_time / num_pbch_decoded * 1000, max_pbch_decode_time * 1000, min_pbch_decode_time * 1000);
+//    float time_to_first_fixed = (float)(time_to_fixed.tv_sec * 1e9 + time_to_fixed.tv_nsec - cell_search_epoch.tv_sec * 1e9 - cell_search_epoch.tv_nsec) / 1e9 * 1e3;
+//    printf("Time to first fixed: %ld ms\n", (long)time_to_first_fixed);
+    printf("Epoch TTI ms: %ld\n", *epoch_tti_ms);
+    printf("TTI to fixed: %ld, average = %.3lf, first = %ld, total = %ld (ms)\n",
+           tti_to_fixed,
+           (double)epoch_tti_to_fixed_count / num_pbch_decoded,
+           epoch_tti_to_first_fixed,
+           epoch_tti_to_fixed_count);
     should_output = false;
 //    exit(0);
   }

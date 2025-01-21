@@ -24,8 +24,11 @@
 
 #define UE_SYNC_NR_DEFAULT_CFO_ALPHA 0.1
 
-int srsran_ue_sync_nr_init(srsran_ue_sync_nr_t* q, const srsran_ue_sync_nr_args_t* args)
+uint64_t* epoch_tti_ms;
+
+int srsran_ue_sync_nr_init(srsran_ue_sync_nr_t* q, const srsran_ue_sync_nr_args_t* args, uint64_t* epoch_tti_ms_source)
 {
+  epoch_tti_ms = epoch_tti_ms_source;
   // Check inputs
   if (q == NULL || args == NULL) {
     return SRSRAN_ERROR_INVALID_INPUTS;
